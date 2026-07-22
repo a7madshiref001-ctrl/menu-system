@@ -166,7 +166,7 @@ html[data-theme="light"] #offerbar .cd{background:#2A2118}
   padding:10px;cursor:pointer;transition:all .18s;text-align:center}
 .sug .s.on{border-color:var(--green);background:var(--green-soft)}
 .sug .s b{display:block;font-size:12.5px;min-height:36px}
-.sug .s i{font-style:normal;color:var(--orange);font-weight:800;font-size:14px;direction:ltr;display:block}
+.sug .s i{font-style:normal;color:var(--orange);font-weight:800;font-size:14px;direction:ltr;display:block;unicode-bidi:isolate}
 .sug .s.on i{color:var(--green)}
 .qty{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line2);
   border-radius:12px;padding:8px 12px;width:fit-content}
