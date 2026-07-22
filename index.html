@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>مطعم فرندس | اطلب من المنيو</title>
+<meta name="description" content="منيو مطعم فرندس بني سويف — كريب، بيتزا، سندوتشات، بروست، مكرونات. اختار واطلب في ثانية.">
+<meta name="theme-color" content="#0D0C0A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'%3E%3Cpath d='M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z' fill='%23F97316'/%3E%3C/svg%3E">
+<meta property="og:title" content="مطعم فرندس — المنيو">
+<meta property="og:description" content="كريب × بيتزا × بروست × سندوتشات — اختار واطلب">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;700;800&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/core.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<!-- ============ SPLASH ============ -->
+<div id="splash">
+  <svg class="tri" viewBox="0 0 100 92"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
+  <div class="word" id="splashWord"></div>
+  <div class="sub">FRIENDS</div>
+</div>
+
+<!-- ============ TOPBAR ============ -->
+<div id="topbar">
+  <div class="logo-mini" onclick="App.home()">
+    <svg viewBox="0 0 100 92"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
+    <b><i>F</i>RIENDS</b>
+  </div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="loyBtn" onclick="App.openLoyalty()" title="كارت الولاء">🎁</button>
+  <button class="iconbtn" onclick="App.toggleTheme()" title="الوضع">🌙</button>
+</div>
+
+<!-- ============ HOME ============ -->
+<div id="home">
+  <div id="offerbar" class="hidden">
+    <div class="em">🔥</div>
+    <div class="tt"><b id="offT"></b><span id="offB"></span></div>
+    <div class="cd" id="offCd">--:--</div>
+  </div>
+
+  <div id="hero">
+    <div class="hero-bg"><img src="assets/hero.jpg" alt=""></div>
+    <div class="in">
+      <h1>طعم يجمع الأصحاب</h1>
+      <p>اختار من المنيو واطلب — من غير انتظار الويتر</p>
+    </div>
+  </div>
+
+  <div id="search">
+    <input id="q" type="search" placeholder="دوّر على صنف… كريب، بيتزا، برجر" autocomplete="off">
+    <div class="ic">🔍</div>
+  </div>
+
+  <div id="searchRes"></div>
+
+  <div id="homeBody">
+    <div class="rail-h"><h2>عروض وكومبوهات</h2><span>وفّر لما تطلب مع بعض</span></div>
+    <div class="rail" id="combos"></div>
+
+    <div class="rail-h"><h2>الأكثر طلباً</h2><span>اللي الناس بتحبه</span></div>
+    <div class="rail" id="pops"></div>
+
+    <div class="rail-h"><h2>المنيو</h2><span>اختار القسم</span></div>
+    <div id="sections"></div>
+
+    <div id="foot">
+      <svg width="42" height="39" viewBox="0 0 100 92" style="opacity:.9"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
+      <div class="ph" id="phones"></div>
+      <div class="ad" id="addr"></div>
+      <div class="by">مدعوم بـ <a href="owner.html" target="_blank">سيستم المبيعات</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SECTION VIEW ============ -->
+<div id="secview">
+  <div class="head">
+    <button class="btn btn-ghost" style="padding:7px 14px;font-size:13px;margin-bottom:10px" onclick="App.home()">→ رجوع</button>
+    <h2 id="svTitle"></h2>
+    <p id="svDesc"></p>
+  </div>
+  <div id="tabs"></div>
+  <div id="svBody"></div>
+  <div style="height:120px"></div>
+</div>
+
+<!-- ============ CART FAB ============ -->
+<div id="cartfab">
+  <div class="bar" onclick="App.openCart()">
+    <span class="n" id="cartN">0</span>
+    <b>السلة</b>
+    <span class="go">إتمام الطلب ← <span id="cartT" class="mono">0</span> ج</span>
+  </div>
+</div>
+
+<!-- ============ SHEETS ============ -->
+<div class="sheet-back" id="back" onclick="App.closeAll()"></div>
+
+<!-- item -->
+<div class="sheet" id="isheet">
+  <div class="grab"></div>
+  <div class="hd"><h3 id="itName"></h3><p id="itDesc"></p><div id="itTags" style="display:flex;gap:5px;margin-top:8px"></div></div>
+  <div class="body">
+    <div class="blk hidden" id="szBlk"><div class="lb">الحجم</div><div class="sizes" id="szList"></div></div>
+    <div class="blk hidden" id="adBlk"><div class="lb">➕ إضافات على طلبك</div><div id="adList"></div></div>
+    <div class="blk hidden" id="sgBlk"><div class="lb">🍟 يتحلى مع…</div><div class="sug" id="sgList"></div></div>
+    <div class="blk"><div class="lb">الكمية</div>
+      <div class="qty"><button onclick="App.qty(-1)">−</button><b id="qtyV">1</b><button onclick="App.qty(1)">+</button></div>
+    </div>
+  </div>
+  <div class="foot">
+    <div class="tot"><span id="itTot" class="mono">0</span> ج</div>
+    <button class="btn btn-p" onclick="App.addToCart()">أضف للسلة</button>
+  </div>
+</div>
+
+<!-- cart -->
+<div class="sheet" id="csheet">
+  <div class="grab"></div>
+  <div class="hd" style="padding:6px 18px 0"><h3>طلبك</h3></div>
+  <div class="body" style="padding:10px 18px 0">
+    <div id="cLines"></div>
+    <div id="cUpsell" class="blk hidden" style="margin-top:16px">
+      <div class="lb">🔥 ناس طلبت دي كمان</div><div class="sug" id="cUpList"></div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="totrow"><span>الإجمالي الفرعي</span><span><span id="cSub" class="mono">0</span> ج</span></div>
+      <div class="totrow hidden" id="cOffRow"><span id="cOffLb">خصم العرض</span><span style="color:var(--green)">− <span id="cOff" class="mono">0</span> ج</span></div>
+      <div class="totrow hidden" id="cDelRow"><span>توصيل</span><span><span id="cDel" class="mono">0</span> ج</span></div>
+      <div class="totrow big"><span>الإجمالي</span><span><span id="cTot" class="mono">0</span> ج</span></div>
+    </div>
+    <div class="blk" style="margin-top:18px">
+      <div class="lb">الطلب لـ</div>
+      <div class="modes" id="modes"></div>
+    </div>
+    <div id="tableBlk" class="field"><label>رقم الترابيزة</label><select id="tableNo"></select></div>
+    <div id="addrBlk" class="field hidden"><label>العنوان</label><input id="cAddr" placeholder="المنطقة والشارع ورقم العمارة"></div>
+    <div class="field"><label>الاسم</label><input id="cName" placeholder="اسمك"></div>
+    <div class="field"><label>رقم الموبايل (عشان نبعتلك عروضنا)</label><input id="cPhone" type="tel" inputmode="numeric" placeholder="01xxxxxxxxx"></div>
+  </div>
+  <div class="foot" style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 70%,transparent);padding:14px 18px 6px;display:flex;gap:10px">
+    <button class="btn btn-g" style="flex:1" onclick="App.sendOrder()">إرسال الطلب على واتساب</button>
+  </div>
+</div>
+
+<!-- done -->
+<div class="sheet" id="done">
+  <div class="grab"></div>
+  <div class="wrap">
+    <div class="tick">✓</div>
+    <h3>طلبك اتبعت 🎉</h3>
+    <div class="oid">رقم الطلب: <b id="dOid" class="mono"></b></div>
+
+    <div id="rateBlk">
+      <div style="margin-top:22px;font-weight:700;font-size:15px">قيّم تجربتك معانا</div>
+      <div class="stars" id="stars"></div>
+      <div style="font-size:12px;color:var(--txt3)" id="rateHint">دوسة واحدة وتفرق معانا</div>
+    </div>
+
+    <div id="lowBlk" class="hidden" style="margin-top:14px;text-align:right">
+      <div class="field"><label>إيه اللي مضايقك؟ هيوصل لصاحب المطعم شخصيًا</label>
+        <input id="rNote" placeholder="اكتب بصراحة…"></div>
+      <button class="btn btn-p" style="width:100%" onclick="App.sendComplaint()">ابعت لصاحب المطعم</button>
+    </div>
+
+    <div id="couponBlk" class="hidden">
+      <div class="coupon"><b id="cCode"></b><span id="cTxt"></span></div>
+    </div>
+
+    <div id="stampBlk" style="margin-top:16px">
+      <div style="font-size:12.5px;color:var(--txt2)">كارت الولاء</div>
+      <div class="stamps" id="stampsRow"></div>
+      <div style="font-size:12px;color:var(--txt3);margin-top:6px" id="stampMsg"></div>
+    </div>
+  </div>
+  <div class="foot" style="padding:14px 18px 6px">
+    <button class="btn btn-s" style="flex:1;width:100%" onclick="App.closeAll()">تمام</button>
+  </div>
+</div>
+
+<!-- loyalty -->
+<div class="sheet" id="loy">
+  <div class="grab"></div>
+  <div class="wrap">
+    <div style="font-size:40px">🎁</div>
+    <h3 style="font-size:22px;font-weight:800;margin-top:6px">كارت الولاء</h3>
+    <div class="big" id="loyN">0/5</div>
+    <div class="stamps" id="loyStamps" style="margin:8px 0 12px"></div>
+    <div style="font-size:13.5px;color:var(--txt2);line-height:1.9" id="loyMsg"></div>
+  </div>
+  <div class="foot" style="padding:14px 18px 6px">
+    <button class="btn btn-s" style="width:100%" onclick="App.closeAll()">تمام</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data/menu.js"></script>
+<script src="data/sales.js"></script>
+<script src="assets/sys.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

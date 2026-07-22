@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>لوحة المبيعات — مطعم فرندس</title>
+<meta name="theme-color" content="#0D0C0A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'%3E%3Cpath d='M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z' fill='%2322C55E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;700;800&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/core.css">
+<link rel="stylesheet" href="assets/owner.css">
+</head>
+<body>
+
+<div id="ohead">
+  <div class="wrap">
+    <div class="in">
+      <div class="lg">
+        <svg viewBox="0 0 100 92"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
+        <div><b>لوحة المبيعات</b><span id="brandName">مطعم فرندس</span></div>
+      </div>
+      <div class="sp"></div>
+      <span class="live"><i></i> مباشر</span>
+      <select id="range" class="iconbtn" style="width:auto;padding:0 10px;font-size:12.5px;font-weight:700;border-radius:12px">
+        <option value="7">آخر ٧ أيام</option>
+        <option value="30" selected>آخر ٣٠ يوم</option>
+        <option value="90">آخر ٩٠ يوم</option>
+      </select>
+      <button class="iconbtn" onclick="Own.theme()">🌙</button>
+    </div>
+    <div id="tabs2">
+      <button class="on" onclick="Own.tab('ov',this)">نظرة عامة</button>
+      <button onclick="Own.tab('it',this)">الأصناف</button>
+      <button onclick="Own.tab('or',this)">الطلبات والعملاء</button>
+      <button onclick="Own.tab('ct',this)">تحكّم فوري</button>
+      <button onclick="Own.tab('roi',this)">💰 حاسبة العائد</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ============ نظرة عامة ============ -->
+<div class="pane on" id="pane-ov">
+
+  <div class="hero-num" style="margin-bottom:12px">
+    <div class="lb">الفلوس اللي السيستم زوّدها في الفترة دي</div>
+    <div class="v"><span id="hAdd" class="mono">0</span> <small style="font-size:.4em">ج</small></div>
+    <div class="d">من الاقتراحات والإضافات اللي المنيو عرضها على العميل —
+      حاجة المنيو المطبوع ما بيعملهاش</div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:12px">
+    <div class="kpi"><div class="lb">زوار المنيو</div><div class="v mono" id="kVis">0</div><div class="d" id="kVisD"></div></div>
+    <div class="kpi"><div class="lb">طلبات من المنيو</div><div class="v mono" id="kOrd">0</div><div class="d" id="kOrdD"></div></div>
+    <div class="kpi acc"><div class="lb">متوسط الفاتورة</div><div class="v"><span id="kAvg" class="mono">0</span> <small>ج</small></div><div class="d">لكل طلب اتبعت من المنيو</div></div>
+    <div class="kpi gr"><div class="lb">قبول الاقتراحات</div><div class="v"><span id="kUp" class="mono">0</span><small>٪</small></div><div class="d">من العملاء وافقوا يزوّدوا صنف</div></div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:12px">
+    <div class="card">
+      <h3>⏰ أوقات الذروة</h3>
+      <div class="sub">في أي ساعة الناس بتتفرج على المنيو — تعرف تظبط الشيفتات والعروض</div>
+      <div class="bars" id="hourBars"></div>
+      <div class="axis" id="hourAxis"></div>
+      <div class="tagline" style="margin-top:12px" id="peakMsg"></div>
+    </div>
+    <div class="card">
+      <h3>📅 أيام الأسبوع</h3>
+      <div class="sub">أقوى وأضعف يوم — عشان تحط العرض في اليوم الميت</div>
+      <div class="bars" id="dowBars"></div>
+      <div class="axis" id="dowAxis"></div>
+      <div class="tagline" style="margin-top:12px" id="dowMsg"></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>🎯 رحلة العميل</h3>
+      <div class="sub">من أول ما فتح المنيو لحد ما بعت الطلب — تشوف بيقع فين</div>
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <div class="card">
+      <h3>🍽️ توزيع الإيراد على الأقسام</h3>
+      <div class="sub">أنهي قسم بيجيب فلوس فعلاً</div>
+      <div class="rowlist" id="secRev"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ الأصناف ============ -->
+<div class="pane" id="pane-it">
+  <div class="grid g2" style="margin-bottom:12px">
+    <div class="card">
+      <h3>🔝 أكتر ١٢ صنف اتشاف</h3>
+      <div class="sub">دي اللي تستاهل صورة أحسن ومكان أعلى في المنيو</div>
+      <div class="rowlist" id="topItems"></div>
+    </div>
+    <div class="card">
+      <h3>💸 أكتر ١٢ صنف جاب فلوس</h3>
+      <div class="sub">مش دايمًا نفس اللي بيتشاف — الفرق بينهم فرصة</div>
+      <div class="rowlist" id="topRev"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>⚠️ اتشاف كتير… ومحدش طلبه</h3>
+    <div class="sub">الصنف ده جاذب في الاسم بس بيخسر عند لحظة القرار — يعني السعر عالي أو الوصف/الصورة ضعيفة</div>
+    <div class="rowlist" id="leak"></div>
+  </div>
+
+  <div class="card">
+    <h3>🪦 الأصناف الميتة — <span id="deadN" style="color:var(--red)">0</span> صنف</h3>
+    <div class="sub">ولا حد فتحها ولا مرة في الفترة دي. دي بتاكل مخزون ومساحة في المنيو وذهن العميل.</div>
+    <div class="dead" id="deadList"></div>
+    <div class="tagline" style="margin-top:13px">
+      قرار سريع: <b>شيل نص دول</b> من المنيو، والمنيو يقصر ← العميل بيقرر أسرع ومتوسط الفاتورة بيعلى.
+    </div>
+  </div>
+</div>
+
+<!-- ============ الطلبات والعملاء ============ -->
+<div class="pane" id="pane-or">
+  <div class="grid g4" style="margin-bottom:12px">
+    <div class="kpi"><div class="lb">إجمالي مبيعات المنيو</div><div class="v"><span id="kRev" class="mono">0</span> <small>ج</small></div></div>
+    <div class="kpi"><div class="lb">إيراد الاقتراحات</div><div class="v"><span id="kUpRev" class="mono">0</span> <small>ج</small></div></div>
+    <div class="kpi"><div class="lb">إيراد الإضافات</div><div class="v"><span id="kAdRev" class="mono">0</span> <small>ج</small></div></div>
+    <div class="kpi gr"><div class="lb">متوسط التقييم</div><div class="v"><span id="kStars" class="mono">0</span><small>/5</small></div><div class="d" id="kStarsD"></div></div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:12px">
+    <div class="card">
+      <h3>🧾 آخر الطلبات</h3>
+      <div class="sub">كل طلب اتبعت من المنيو — بالترابيزة والقيمة</div>
+      <div id="orders"></div>
+    </div>
+    <div class="card">
+      <h3>⭐ التقييمات</h3>
+      <div class="sub">اللي فوق ٤ نجوم بيروح لجوجل — واللي تحت كده بيوصلك انت بس قبل ما يتنشر</div>
+      <div id="reviews"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📇 قاعدة عملائك <span id="cusN" style="color:var(--orange)"></span></h3>
+    <div class="sub">أرقام اتجمعت من المنيو — دي أصل بيملكه المطعم، تقدر تبعتلهم عروض في أي وقت</div>
+    <div id="customers"></div>
+    <button class="btn btn-s no-print" style="margin-top:12px" onclick="Own.exportCsv()">⬇️ تنزيل الأرقام (CSV)</button>
+  </div>
+</div>
+
+<!-- ============ تحكّم فوري ============ -->
+<div class="pane" id="pane-ct">
+  <div class="grid g2" style="margin-bottom:12px">
+    <div class="card">
+      <h3>🔴 خلص الصنف</h3>
+      <div class="sub">اقفل أي صنف نفد — بيختفي من منيو العميل في ثانية، من غير ما تعيد طباعة حاجة</div>
+      <input class="searchbox" id="soSearch" placeholder="دوّر على الصنف…">
+      <div id="soList" style="max-height:330px;overflow-y:auto"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3>🔥 عرض النهاردة</h3>
+        <div class="sub">بيظهر فوق المنيو بعدّاد وقت — الاستعجال بيرفع الطلب</div>
+        <div class="ctlrow"><div class="nm">تشغيل العرض</div><div class="sw" id="swOffer" onclick="Own.tglOffer()"><i></i></div></div>
+        <div style="margin-top:12px">
+          <label style="font-size:12px;color:var(--txt3);font-weight:700">عنوان العرض</label>
+          <input class="searchbox" id="offT2" style="margin-top:6px">
+          <label style="font-size:12px;color:var(--txt3);font-weight:700">تفاصيل العرض</label>
+          <input class="searchbox" id="offB2" style="margin-top:6px">
+          <button class="btn btn-p" style="width:100%" onclick="Own.saveOffer()">حفظ وتحديث المنيو</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>💵 تغيير سعر</h3>
+        <div class="sub">السعر بيتغيّر عند العميل فورًا</div>
+        <input class="searchbox" id="prSearch" placeholder="دوّر على الصنف…">
+        <div id="prList" style="max-height:230px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card no-print">
+    <h3>🔗 اللينكات</h3>
+    <div class="sub">لينك واحد للعميل على الترابيزة، ولينك تاني ليك انت بس</div>
+    <div class="rowlist" id="links"></div>
+  </div>
+</div>
+
+<!-- ============ حاسبة العائد ============ -->
+<div class="pane" id="pane-roi">
+  <div class="card" style="margin-bottom:12px">
+    <h3>💰 السيستم ده بيرجّع فلوسه في كام يوم؟</h3>
+    <div class="sub">غيّر الأرقام بأرقام مطعمك انت — الحساب بيتظبط لحظيًا</div>
+    <div class="calcrow"><label>عدد الطلبات في اليوم</label><input id="rOrd" type="number" value="60"></div>
+    <div class="calcrow"><label>متوسط الفاتورة الحالي (ج)</label><input id="rAvg" type="number" value="118"></div>
+    <div class="calcrow"><label>الزيادة المتوقعة في الفاتورة (ج)</label><input id="rUp" type="number" value="14"></div>
+    <div class="calcrow"><label>سعر السيستم في السنة (ج)</label><input id="rPrice" type="number" value="7900"></div>
+
+    <div class="calcout">
+      <div class="lb">الزيادة في المبيعات شهريًا</div>
+      <div class="v"><span id="oMonth" class="mono">0</span> ج</div>
+      <div class="d">
+        سنويًا: <b id="oYear" class="mono">0</b> ج ·
+        بيرجّع تكلفته في <b id="oDays" class="mono">0</b> يوم ·
+        العائد <b id="oRoi" class="mono">0</b>×
+      </div>
+      <div class="d" style="border-top:1px solid rgba(255,255,255,.09);margin-top:12px;padding-top:10px">
+        وحتى لو الزيادة طلعت <b>نص</b> الرقم ده بس:
+        <b id="oHalf" class="mono">0</b> ج شهريًا — وبرضه بترجّع تكلفته في <b id="oHalfD" class="mono">0</b> يوم
+      </div>
+    </div>
+    <div class="note">الحساب مبني على زيادة متوسط الفاتورة فقط. مش محسوب فيه: الأصناف الميتة اللي هتوفّرها،
+      ولا العملاء اللي هيرجعوا بالكوبون والولاء، ولا تقييمات جوجل اللي هتجيب زباين جدد.</div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card"><h3>📉 قبل السيستم</h3>
+      <div class="rowlist">
+        <div class="rw"><div class="nm"><b>الأصناف الميتة</b><span>مش معروفة</span></div></div>
+        <div class="rw"><div class="nm"><b>أوقات الذروة</b><span>بالإحساس</span></div></div>
+        <div class="rw"><div class="nm"><b>الاقتراح للعميل</b><span>على مزاج الويتر</span></div></div>
+        <div class="rw"><div class="nm"><b>أرقام العملاء</b><span>صفر</span></div></div>
+        <div class="rw"><div class="nm"><b>الشكوى</b><span>بتروح جوجل على طول</span></div></div>
+        <div class="rw"><div class="nm"><b>تغيير سعر</b><span>إعادة طباعة</span></div></div>
+      </div>
+    </div>
+    <div class="card"><h3>📈 بعد السيستم</h3>
+      <div class="rowlist">
+        <div class="rw"><div class="nm"><b>الأصناف الميتة</b><span style="color:var(--green)">بالاسم والرقم</span></div></div>
+        <div class="rw"><div class="nm"><b>أوقات الذروة</b><span style="color:var(--green)">رسم بياني بالساعة</span></div></div>
+        <div class="rw"><div class="nm"><b>الاقتراح للعميل</b><span style="color:var(--green)">تلقائي مع كل صنف</span></div></div>
+        <div class="rw"><div class="nm"><b>أرقام العملاء</b><span style="color:var(--green)">قاعدة بيانات بتكبر</span></div></div>
+        <div class="rw"><div class="nm"><b>الشكوى</b><span style="color:var(--green)">بتوصلك انت الأول</span></div></div>
+        <div class="rw"><div class="nm"><b>تغيير سعر</b><span style="color:var(--green)">ثانية واحدة</span></div></div>
+      </div>
+    </div>
+    <div class="card"><h3>🧾 اللي بتاخده</h3>
+      <div class="rowlist">
+        <div class="rw"><div class="nm"><b>منيو QR كامل</b><span>بهوية مطعمك</span></div></div>
+        <div class="rw"><div class="nm"><b>لوحة أرقام</b><span>الصفحة اللي انت فيها</span></div></div>
+        <div class="rw"><div class="nm"><b>محرّك اقتراحات</b><span>أب-سيل + إضافات + كومبو</span></div></div>
+        <div class="rw"><div class="nm"><b>استقبال الطلبات</b><span>واتساب برقم الترابيزة</span></div></div>
+        <div class="rw"><div class="nm"><b>فلتر تقييمات</b><span>يحمي تقييمك على جوجل</span></div></div>
+        <div class="rw"><div class="nm"><b>ولاء وكوبونات</b><span>بترجّع العميل</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:26px 0 10px" class="no-print">
+  <span class="demo-chip" id="demoChip" onclick="Own.tglDemo()">● وضع العرض التجريبي</span>
+  <div class="note" style="max-width:520px;margin:10px auto 0" id="demoNote"></div>
+  <button class="btn btn-ghost" style="margin-top:12px;font-size:12px;padding:8px 14px" onclick="Own.print()">🖨️ طباعة تقرير</button>
+  <button class="btn btn-ghost" style="margin-top:12px;font-size:12px;padding:8px 14px" onclick="Own.reset()">إعادة ضبط البيانات</button>
+</div>
+</div>
+
+<script src="data/menu.js"></script>
+<script src="data/sales.js"></script>
+<script src="assets/sys.js"></script>
+<script src="assets/owner.js"></script>
+</body>
+</html>
