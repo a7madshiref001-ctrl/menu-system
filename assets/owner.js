@@ -194,7 +194,7 @@
       (o.del ? '<div class="rc-t"><span>توصيل</span><span>' + FS.money(o.del) + " " + CUR + "</span></div>" : "") +
       '<div class="rc-t big"><span>الإجمالي</span><span>' + FS.money(o.total || 0) + " " + CUR + "</span></div>" +
       "<hr>" +
-      '<div class="rc-vat">الأسعار شاملة ضريبة القيمة المضافة 15%<br>الرقم الضريبي: 310158975400003</div><hr>' +
+      '<div class="rc-vat">الأسعار شاملة ضريبة القيمة المضافة 15%<br>الرقم الضريبي: 300000000000003</div><hr>' +
       '<div class="rc-f">شكرًا لزيارتكم — نتشرف فيكم دايم<br>' +
       (M.brand.phones || []).slice(0, 2).map(E).join(" · ") +
       "<br>" + E((M.brand.address || "").split("—")[0].trim()) + "</div>" +

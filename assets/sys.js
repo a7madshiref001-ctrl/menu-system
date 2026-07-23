@@ -193,7 +193,7 @@
             if (rnd() < 0.18) {
               customers.push({
                 t: ts + 300000, demo: 1,
-                phone: "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 10000000)).padStart(7, "0"),
+                phone: "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + "00" + String(Math.floor(rnd() * 100000)).padStart(5, "0"),
                 name: NAMES[Math.floor(rnd() * 10)],
                 spent: total
               });
@@ -210,7 +210,7 @@
       o.seen = true;
       if (rnd() < 0.4) {
         o.name = NAMES[Math.floor(rnd() * 10)];
-        o.phone = "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 10000000)).padStart(7, "0");
+        o.phone = "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + "00" + String(Math.floor(rnd() * 100000)).padStart(5, "0");
       }
       if (o.mode === "توصيل") o.addr = ["حي النرجس — شارع أنس بن مالك", "حي الياسمين — طريق الملك عبدالعزيز", "حي الملقا — شارع الثمامة", "حي قرطبة — الدائري الشرقي"][Math.floor(rnd() * 4)];
     });
@@ -219,7 +219,7 @@
       orders[orders.length - 2].status = "prep";
     }
     set(K.ev, evs); set(K.ord, orders); set(K.rev, reviews); set(K.cus, customers);
-    set(K.seed, { v: 3, at: Date.now(), days: days });
+    set(K.seed, { v: 4, at: Date.now(), days: days });
   }
 
   /* ---------------- تتبّع حقيقي ---------------- */
@@ -401,7 +401,7 @@
     money: money, esc: esc, cid: cid,
     ensureSeed: function () {
       var s = get(K.seed, null);
-      if (!s || s.v !== 3) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد
+      if (!s || s.v !== 4) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد
         [K.ev, K.ord, K.rev, K.cus, K.ctl].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } });
         buildIndex(); seedDemo(30);
       } else buildIndex();
