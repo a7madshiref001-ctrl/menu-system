@@ -166,6 +166,8 @@ html[data-theme="light"] .calcout{background:#241C15}
 .rc-t{display:flex;justify-content:space-between;font-size:11.5px;line-height:2}
 .rc-t.big{font-size:15px;font-weight:800;font-family:'Changa'}
 .rc-f{text-align:center;font-size:10.5px;color:#333;line-height:1.9;padding-top:4px}
+.rc-vat{text-align:center;font-size:9.5px;color:#444;line-height:1.8}
+.snd-off{position:absolute;width:2px;height:24px;background:var(--red);transform:rotate(45deg);border-radius:2px}
 
 @page{size:80mm auto;margin:4mm}
 @media print{

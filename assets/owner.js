@@ -6,11 +6,11 @@
   "use strict";
   var M = window.MENU, S = window.SALES, E = FS.esc, $ = function (i) { return document.getElementById(i); };
   var CUR = M.brand.currency || "ج";
-  var DOW = ["الأحد", "الاتنين", "التلات", "الأربع", "الخميس", "الجمعة", "السبت"];
+  var DOW = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
   var ST = {
     "new": { t: "جديد", c: "st-new" },
-    prep: { t: "في التحضير", c: "st-prep" },
-    done: { t: "اتسلم", c: "st-done" },
+    prep: { t: "قيد التجهيز", c: "st-prep" },
+    done: { t: "تم التسليم", c: "st-done" },
     cancel: { t: "ملغي", c: "st-cancel" }
   };
   var days = 30, demo = true, filter = "all", activePane = "or", A = null;
@@ -66,7 +66,7 @@
       var n = unseenCount();
       if (!n) { stopAlarm(); return; }
       on = !on;
-      document.title = on ? "🔔 (" + n + ") أوردر جديد!" : baseTitle;
+      document.title = on ? "(" + n + ") طلب جديد" : baseTitle;
     }, 900);
   }
 
@@ -78,9 +78,9 @@
   function fmtTime(t) {
     var d = new Date(t), now = new Date();
     var hm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-    if (d.toDateString() === now.toDateString()) return hm + " · النهاردة";
+    if (d.toDateString() === now.toDateString()) return hm + " · اليوم";
     var y = new Date(now.getTime() - 86400000);
-    if (d.toDateString() === y.toDateString()) return hm + " · امبارح";
+    if (d.toDateString() === y.toDateString()) return hm + " · أمس";
     return hm + " · " + d.getDate() + "/" + (d.getMonth() + 1);
   }
   function linesText(o) {
@@ -103,7 +103,7 @@
     // الفلاتر
     var counts = { all: ords.length };
     Object.keys(ST).forEach(function (k) { counts[k] = ords.filter(function (o) { return stOf(o) === k; }).length; });
-    var chips = [["all", "الكل"], ["new", "جديد"], ["prep", "في التحضير"], ["done", "اتسلم"], ["cancel", "ملغي"]];
+    var chips = [["all", "الكل"], ["new", "جديد"], ["prep", "قيد التجهيز"], ["done", "تم التسليم"], ["cancel", "ملغي"]];
     $("fchips").innerHTML = chips.map(function (c) {
       return '<button class="' + (filter === c[0] ? "on" : "") + '" onclick="Own.setFilter(\'' + c[0] + '\')">' +
         c[1] + " <b>" + counts[c[0]] + "</b></button>";
@@ -111,27 +111,27 @@
 
     var list = ords.filter(function (o) { return filter === "all" || stOf(o) === filter; }).slice(0, 60);
     if (!list.length) {
-      $("ordList").innerHTML = '<div class="empty" style="text-align:center;padding:44px 20px;color:var(--txt3)">مفيش أوردرات هنا لسه 🧾</div>';
+      $("ordList").innerHTML = '<div class="empty" style="text-align:center;padding:44px 20px;color:var(--txt3)">ما فيه طلبات هنا</div>';
       return;
     }
     $("ordList").innerHTML = list.map(function (o) {
       var st = stOf(o), meta = ST[st];
-      var who = '<span class="md">' + E(o.mode || "") + (o.table ? " · ترابيزة " + E(o.table) : "") + "</span>";
+      var who = '<span class="md">' + E(o.mode || "") + (o.table ? " · طاولة " + E(o.table) : "") + "</span>";
       if (o.name) who += "<b>" + E(o.name) + "</b>";
       if (o.phone) who += '<a href="tel:' + E(o.phone) + '">' + E(o.phone) + "</a>";
-      var acts = '<button class="btn btn-s" onclick="Own.printOrder(\'' + E(o.id) + '\')">🖨️ ريسيت</button>';
+      var acts = '<button class="btn btn-s" onclick="Own.printOrder(\'' + E(o.id) + '\')">طباعة الفاتورة</button>';
       if (st === "new")
-        acts += '<button class="btn btn-p" onclick="Own.setSt(\'' + E(o.id) + '\',\'prep\')">ابدأ التحضير</button>' +
+        acts += '<button class="btn btn-p" onclick="Own.setSt(\'' + E(o.id) + '\',\'prep\')">ابدأ التجهيز</button>' +
           '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>';
       else if (st === "prep")
-        acts += '<button class="btn btn-g" onclick="Own.setSt(\'' + E(o.id) + '\',\'done\')">اتسلم ✓</button>' +
+        acts += '<button class="btn btn-g" onclick="Own.setSt(\'' + E(o.id) + '\',\'done\')">تم التسليم</button>' +
           '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>';
       return '<div class="ordcard' + (st === "new" ? " is-new" : "") + '">' +
         '<div class="oc-top"><b class="oc-id">#' + E(o.id) + '</b>' +
         '<span class="stchip ' + meta.c + '">' + meta.t + "</span>" +
         '<span class="oc-time">' + fmtTime(o.t) + "</span></div>" +
         '<div class="oc-who">' + who + "</div>" +
-        (o.addr ? '<div class="oc-addr">📍 ' + E(o.addr) + "</div>" : "") +
+        (o.addr ? '<div class="oc-addr">العنوان: ' + E(o.addr) + "</div>" : "") +
         '<div class="oc-lines">' + linesText(o) + "</div>" +
         '<div class="oc-foot"><b class="oc-tot">' + FS.money(o.total || 0) + " " + CUR + '</b><div class="sp"></div>' + acts + "</div>" +
         "</div>";
@@ -158,7 +158,7 @@
 
   function setSt(id, st) { FS.setOrderStatus(id, st); refreshOrders(false); paintStats(); }
   function cancelOrder(id) {
-    if (!confirm("متأكد تلغي الأوردر #" + id + "؟")) return;
+    if (!confirm("متأكد تلغي الطلب #" + id + "؟")) return;
     FS.setOrderStatus(id, "cancel");
     refreshOrders(false); paintStats();
   }
@@ -177,7 +177,7 @@
       '<div class="l"><b>#' + E(o.id) + "</b><span>" +
       String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") +
       " · " + d.getDate() + "/" + (d.getMonth() + 1) + "/" + d.getFullYear() + "</span></div>" +
-      '<div class="l"><span>' + E(o.mode || "") + (o.table ? " — ترابيزة " + E(o.table) : "") + "</span></div>" +
+      '<div class="l"><span>' + E(o.mode || "") + (o.table ? " — طاولة " + E(o.table) : "") + "</span></div>" +
       (o.name ? '<div class="l"><span>الاسم: ' + E(o.name) + "</span>" +
         (o.phone ? "<span>" + E(o.phone) + "</span>" : "") + "</div>"
         : (o.phone ? '<div class="l"><span>ت: ' + E(o.phone) + "</span></div>" : "")) +
@@ -194,7 +194,8 @@
       (o.del ? '<div class="rc-t"><span>توصيل</span><span>' + FS.money(o.del) + " " + CUR + "</span></div>" : "") +
       '<div class="rc-t big"><span>الإجمالي</span><span>' + FS.money(o.total || 0) + " " + CUR + "</span></div>" +
       "<hr>" +
-      '<div class="rc-f">شكراً يا صاحبي 🧡<br>' +
+      '<div class="rc-vat">الأسعار شاملة ضريبة القيمة المضافة 15%<br>الرقم الضريبي: 310158975400003</div><hr>' +
+      '<div class="rc-f">شكرًا لزيارتكم — نتشرف فيكم دايم<br>' +
       (M.brand.phones || []).slice(0, 2).map(E).join(" · ") +
       "<br>" + E((M.brand.address || "").split("—")[0].trim()) + "</div>" +
       "</div>";
@@ -221,7 +222,7 @@
   }
   function rowList(id, rows, opt) {
     opt = opt || {};
-    if (!rows.length) { $(id).innerHTML = '<div style="padding:22px;color:var(--txt3);font-size:13px;text-align:center">مفيش بيانات في الفترة دي</div>'; return; }
+    if (!rows.length) { $(id).innerHTML = '<div style="padding:22px;color:var(--txt3);font-size:13px;text-align:center">ما فيه بيانات بهذي الفترة</div>'; return; }
     var mx = Math.max.apply(null, rows.map(function (r) { return r.bar || 0; }).concat([1]));
     $(id).innerHTML = rows.map(function (r, i) {
       return '<div class="rw">' + (opt.rank ? '<div class="rk">' + (i + 1) + "</div>" : "") +
@@ -237,9 +238,9 @@
 
     $("hAdd").textContent = FS.money(A.upRevenue + A.addonRevenue);
     $("kVis").textContent = FS.money(A.visits);
-    $("kVisD").textContent = "≈ " + A.perDayVisits + " زائر في اليوم";
+    $("kVisD").textContent = "تقريبًا " + A.perDayVisits + " زائر باليوم";
     $("kOrd").textContent = FS.money(A.orders);
-    $("kOrdD").textContent = A.convRate + "٪ من الزوار طلبوا";
+    $("kOrdD").textContent = A.convRate + "٪ من الزوار أرسلوا طلب";
     $("kAvg").textContent = FS.money(A.avgTicket);
     $("kUp").textContent = A.upRate;
     $("kRev").textContent = FS.money(A.revenue);
@@ -252,29 +253,29 @@
     var pk = A.byHour.indexOf(Math.max.apply(null, A.byHour));
     var lowEv = A.byHour.map(function (v, i) { return { v: v, i: i }; })
       .filter(function (r) { return r.i >= 12 && r.i <= 21; }).sort(function (a, b) { return a.v - b.v; })[0];
-    $("peakMsg").innerHTML = "أعلى ساعة عندك <b>" + pk + ":00</b> — لازم تبقى كامل العدد فيها. " +
-      "وأضعف ساعة <b>" + (lowEv ? lowEv.i : "-") + ":00</b> — دي مكان العرض المحدود.";
+    $("peakMsg").innerHTML = "أعلى ساعة عندك <b>" + pk + ":00</b> — خل فريقك كامل فيها. " +
+      "وأهدى ساعة <b>" + (lowEv ? lowEv.i : "-") + ":00</b> — هذي مكان العرض المحدود.";
 
     bars("dowBars", "dowAxis", A.byDow, ["ح", "ن", "ث", "ر", "خ", "ج", "س"]);
     var bi = A.byDow.indexOf(Math.max.apply(null, A.byDow));
     var wi = A.byDow.indexOf(Math.min.apply(null, A.byDow.filter(function (x) { return x > 0; })));
-    $("dowMsg").innerHTML = "أقوى يوم <b>" + DOW[bi] + "</b> وأضعف يوم <b>" + DOW[wi < 0 ? 1 : wi] +
-      "</b>. حط عرض على اليوم الضعيف بس — مش على الأسبوع كله.";
+    $("dowMsg").innerHTML = "أقوى يوم <b>" + DOW[bi] + "</b> وأهدى يوم <b>" + DOW[wi < 0 ? 1 : wi] +
+      "</b>. خل العرض على اليوم الهادي بس — مو على الأسبوع كله.";
 
     rowList("topItems", A.top.slice(0, 12).map(function (r) {
-      return { n: r.n, sub: r.sec + " · اتطلب " + r.orders + " مرة", v: FS.money(r.views), v2: "مشاهدة", bar: r.views };
+      return { n: r.n, sub: r.sec + " · انطلب " + r.orders + " مرة", v: FS.money(r.views), v2: "مشاهدة", bar: r.views };
     }), { rank: true });
     rowList("topRev", A.topRev.slice(0, 12).map(function (r) {
       return { n: r.n, sub: r.q + " طلب", v: FS.money(r.rev) + " " + CUR, bar: r.rev };
     }), { rank: true });
     rowList("leak", A.leak.map(function (r) {
-      return { n: r.n, sub: "اتشاف " + r.views + " مرة · اتطلب " + r.orders + " · سعره " + r.price + " " + CUR, v: pct(r.orders, r.views) + "٪", v2: "تحويل" };
+      return { n: r.n, sub: "انشاف " + r.views + " مرة · انطلب " + r.orders + " · سعره " + r.price + " " + CUR, v: pct(r.orders, r.views) + "٪", v2: "تحويل" };
     }));
 
     $("deadN").textContent = A.dead.length;
     $("deadList").innerHTML = A.dead.length
       ? A.dead.map(function (d) { return "<span>" + E(d.n) + " · " + d.price + " " + CUR + "</span>"; }).join("")
-      : '<div style="color:var(--txt3);font-size:13px">كل الأصناف اتشافت — عاش 👏</div>';
+      : '<div style="color:var(--txt3);font-size:13px">كل الأصناف انشافت — ممتاز</div>';
 
     paintCustomers();
   }
@@ -298,34 +299,30 @@
       return '<div class="revrow"><div class="stars-s">' + "★".repeat(r.stars) + "</div>" +
         '<div class="bd">' + (r.note ? E(r.note) : (r.stars >= 4 ? "تقييم إيجابي" : "بدون تعليق")) + "</div>" +
         '<div class="tg ' + (r.sent === "google" ? "g" : "o") + '">' +
-        (r.sent === "google" ? "راح لجوجل" : "وصلك انت") + "</div></div>";
-    }).join("") : '<div style="color:var(--txt3);font-size:13px;padding:16px 0">لسه مفيش تقييمات</div>';
+        (r.sent === "google" ? "راح لقوقل" : "وصلت لك") + "</div></div>";
+    }).join("") : '<div style="color:var(--txt3);font-size:13px;padding:16px 0">ما فيه تقييمات للحين</div>';
   }
   function exportCsv() {
-    var rows = [["الاسم", "الموبايل", "قيمة الطلب", "التاريخ"]].concat(
+    var rows = [["الاسم", "الجوال", "قيمة الطلب", "التاريخ"]].concat(
       A.customers.map(function (c) {
-        return [c.name || "", c.phone, c.spent || 0, new Date(c.t).toLocaleDateString("ar-EG")];
+        return [c.name || "", c.phone, c.spent || 0, new Date(c.t).toLocaleDateString("ar-SA")];
       }));
     var csv = "﻿" + rows.map(function (r) { return r.join(","); }).join("\n");
     var a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "friends-customers.csv"; a.click();
+    a.download = "customers.csv"; a.click();
   }
 
   /* ================= التحكم ================= */
   function paintControl() {
-    var c = FS.control();
-    $("swOffer").classList.toggle("on", c.offerOn == null ? S.offer.on : c.offerOn);
-    if (document.activeElement !== $("offT2")) $("offT2").value = c.offerTitle || S.offer.title;
-    if (document.activeElement !== $("offB2")) $("offB2").value = c.offerBody || S.offer.body;
     renderSo($("soSearch").value.trim());
     renderPr($("prSearch").value.trim());
     var url = location.href.replace(/owner\.html.*$/, "");
     $("links").innerHTML =
-      '<div class="rw"><div class="nm"><b>لينك العميل (QR الترابيزة)</b><span style="direction:ltr;display:inline-block">' +
+      '<div class="rw"><div class="nm"><b>رابط العميل (QR الطاولة)</b><span style="direction:ltr;display:inline-block">' +
       E(url) + '</span></div><div class="mt"><a class="btn btn-s" style="font-size:12px;padding:8px 12px" href="' +
-      E(url) + '" target="_blank">افتح</a></div></div>' +
-      '<div class="rw"><div class="nm"><b>لينك اللوحة دي (ليك انت بس)</b><span style="direction:ltr;display:inline-block">' +
+      E(url) + '" target="_blank">فتح</a></div></div>' +
+      '<div class="rw"><div class="nm"><b>رابط اللوحة (لك أنت بس)</b><span style="direction:ltr;display:inline-block">' +
       E(url + "owner.html") + "</span></div></div>";
   }
   function renderSo(q) {
@@ -370,20 +367,6 @@
     if (!v || (rec && v === rec.price)) delete c.prices[n]; else c.prices[n] = v;
     FS.saveControl(c); renderPr($("prSearch").value.trim());
   }
-  function tglOffer() {
-    var c = FS.control();
-    var now = c.offerOn == null ? S.offer.on : c.offerOn;
-    c.offerOn = !now; FS.saveControl(c);
-    $("swOffer").classList.toggle("on", c.offerOn);
-  }
-  function saveOffer() {
-    var c = FS.control();
-    c.offerTitle = $("offT2").value.trim();
-    c.offerBody = $("offB2").value.trim();
-    FS.saveControl(c);
-    alert("اتحدّث ✓ — افتح لينك العميل هتلاقي العرض اتغيّر");
-  }
-
   /* ================= حاسبة العائد ================= */
   function calc() {
     var ord = +$("rOrd").value || 0, avg = +$("rAvg").value || 0,
@@ -403,12 +386,12 @@
     refreshOrders(fromEvent);
     paintStats();
     paintControl();
-    $("demoChip").innerHTML = demo ? "● وضع العرض التجريبي" : "○ بيانات حقيقية فقط";
+    $("demoChip").innerHTML = demo ? "وضع العرض التجريبي" : "بيانات حقيقية فقط";
     $("demoChip").style.background = demo ? "" : "var(--green-soft)";
     $("demoChip").style.color = demo ? "" : "var(--green)";
     $("demoNote").textContent = demo
-      ? "اللوحة بتعرض بيانات تجريبية لـ ٣٠ يوم عشان تشوف السيستم عايش. دوس عشان تشوف الحقيقي بس."
-      : "دي البيانات الحقيقية اللي اتسجّلت فعلًا من لينك العميل على الجهاز ده.";
+      ? "اللوحة تعرض بيانات تجريبية لـ ٣٠ يوم عشان تشوف النظام شغال. اضغط عشان تشوف البيانات الحقيقية بس."
+      : "هذي البيانات الحقيقية اللي انسجلت من رابط العميل على هذا الجهاز.";
   }
   function tab(id, btn) {
     activePane = id;
@@ -427,7 +410,7 @@
   function tglSound() {
     soundOn = !soundOn;
     FS.set("fsys.sound.v1", soundOn);
-    $("sndBtn").textContent = soundOn ? "🔔" : "🔕";
+    $("sndOff").classList.toggle("hidden", soundOn);
     if (soundOn) chime(); else stopAlarm();
   }
 
@@ -436,7 +419,7 @@
     document.documentElement.setAttribute("data-theme", FS.get(FS.K.theme, "dark"));
     FS.ensureSeed();
     $("brandName").textContent = M.brand.nameAr;
-    $("sndBtn").textContent = soundOn ? "🔔" : "🔕";
+    $("sndOff").classList.toggle("hidden", soundOn);
     $("rOrd").value = S.roi.ordersPerDay;
     $("rAvg").value = S.roi.avgTicket;
     $("rUp").value = S.roi.upliftEGP;
@@ -460,11 +443,11 @@
   window.Own = {
     tab: tab, theme: theme, tglSound: tglSound, setFilter: function (f) { filter = f; paintOrders(); },
     setSt: setSt, cancelOrder: cancelOrder, printOrder: printOrder,
-    tglSold: tglSold, setPrice: setPrice, tglOffer: tglOffer, saveOffer: saveOffer,
+    tglSold: tglSold, setPrice: setPrice,
     exportCsv: exportCsv,
     tglDemo: function () { demo = !demo; filter = "all"; refreshAll(false); },
     reset: function () {
-      if (confirm("هيمسح كل البيانات ويولّد ٣٠ يوم تجريبي من جديد. تمام؟")) { FS.reset(); location.reload(); }
+      if (confirm("بينمسح كل شي وينولد ٣٠ يوم تجريبي من جديد. أكيد؟")) { FS.reset(); location.reload(); }
     }
   };
   document.addEventListener("DOMContentLoaded", init);

@@ -24,8 +24,8 @@
     return o != null ? o : rec.price;
   }
   function badgeOf(n) {
-    if (S.badges.hot.indexOf(n) > -1) return { c: "chip-hot", t: "🔥 الأكثر طلباً" };
-    if (S.badges.chef.indexOf(n) > -1) return { c: "chip-chef", t: "👨‍🍳 ترشيح الشيف" };
+    if (S.badges.hot.indexOf(n) > -1) return { c: "chip-hot", t: "الأكثر طلبًا" };
+    if (S.badges.chef.indexOf(n) > -1) return { c: "chip-chef", t: "ترشيح الشيف" };
     return null;
   }
 
@@ -36,34 +36,6 @@
       return '<span style="animation-delay:' + (0.25 + i * 0.06) + 's">' + c + "</span>";
     }).join("");
     setTimeout(function () { $("splash").classList.add("gone"); }, 1750);
-  }
-
-  /* ---------- عرض اليوم ---------- */
-  function offerTick() {
-    var o = FS.offerLive(), bar = $("offerbar");
-    if (!o) { bar.classList.add("hidden"); return; }
-    $("offT").textContent = o.title;
-    $("offB").textContent = o.body;
-    bar.classList.remove("hidden");
-    if (!o.active) {
-      var h12 = o.from % 12 || 12;
-      $("offCd").textContent = "يبدأ " + h12 + (o.from >= 12 ? "م" : "ص");
-      return;
-    }
-    var ms = o.endsAt - Date.now();
-    if (ms < 0) ms = 0;
-    var h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000), s = Math.floor(ms % 60000 / 1000);
-    $("offCd").textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
-  }
-  function offerDiscount() {
-    var o = FS.offerLive();
-    if (!o || !o.active) return { amount: 0, label: "" };
-    var amt = 0;
-    cart.forEach(function (l) {
-      if (l.sec === S.offer.applyTo.section && l.sizeIx === S.offer.applyTo.size)
-        amt += l.p * l.q * (o.pct / 100);
-    });
-    return { amount: Math.round(amt), label: o.title + " (" + o.pct + "٪)" };
   }
 
   /* ---------- الرئيسية ---------- */
@@ -90,14 +62,13 @@
       var count = (s.cats || []).reduce(function (a, c) { return a + (c.items || []).length; }, 0);
       return '<div class="sec" onclick="App.openSection(\'' + E(s.id) + '\')">' +
         '<img src="' + E(s.img) + '" alt=""><div class="ov"></div>' +
-        '<div class="em">' + E(s.emoji || "") + "</div>" +
         '<div class="tx"><b>' + E(s.title) + "</b><span>" + count + " صنف</span></div></div>";
     }).join("");
   }
   function renderQuickNav() {
     $("quicknav").innerHTML = M.sections.map(function (s) {
       return '<div class="qchip" onclick="App.openSection(\'' + E(s.id) + '\')">' +
-        '<span class="e">' + E(s.emoji || "") + "</span>" + E(s.title) + "</div>";
+        E(s.title) + "</div>";
     }).join("");
   }
   function renderFoot() {
@@ -120,9 +91,9 @@
     var hits = FS.items().filter(function (r) { return norm(r.n).indexOf(nq) > -1; }).slice(0, 40);
     FS.track("search", { q: q, hits: hits.length });
     res.innerHTML = '<div class="catblock" style="margin-top:14px">' +
-      '<div class="ch"><span class="bar"></span><b>نتايج البحث</b><span class="cnt">' + hits.length + " صنف</span></div>" +
+      '<div class="ch"><span class="bar"></span><b>نتائج البحث</b><span class="cnt">' + hits.length + " صنف</span></div>" +
       '<div class="cat">' +
-      (hits.length ? hits.map(itemRow).join("") : '<div class="empty">مفيش صنف بالاسم ده 🤔</div>') +
+      (hits.length ? hits.map(itemRow).join("") : '<div class="empty">ما فيه صنف بهذا الاسم</div>') +
       "</div></div>";
   }
 
@@ -162,9 +133,9 @@
     var count = (s.cats || []).reduce(function (a, c) { return a + (c.items || []).length; }, 0);
     $("svBanner").innerHTML =
       '<img src="' + E(s.img) + '" alt=""><div class="ov"></div>' +
-      '<button class="back" onclick="App.home()">→ رجوع</button>' +
-      '<span class="cnt">' + count + " صنف · " + s.cats.length + " فئات</span>" +
-      '<div class="tx"><h2>' + E(s.emoji || "") + " " + E(s.title) + "</h2><p>" + E(s.desc || "") + "</p></div>";
+      '<button class="back" onclick="App.home()">رجوع</button>' +
+      '<span class="cnt">' + count + " صنف · " + s.cats.length + " أقسام</span>" +
+      '<div class="tx"><h2>' + E(s.title) + "</h2><p>" + E(s.desc || "") + "</p></div>";
 
     $("tabs").innerHTML = s.cats.map(function (c, i) {
       return '<button data-cat="' + E(c.id) + '" class="' + (i === 0 ? "on" : "") +
@@ -228,7 +199,7 @@
 
   function openItem(name) {
     var r = FS.byName(name);
-    if (!r || isOut(name)) { if (r) toast("الصنف ده نفد دلوقتي 🙏"); return; }
+    if (!r || isOut(name)) { if (r) toast("هذا الصنف نفد حاليًا"); return; }
     FS.track("item_view", { n: r.n, sec: r.sec, p: priceOf(r) });
 
     cur = { rec: r, q: 1, sizeIx: null, addons: [], sug: [] };
@@ -340,19 +311,19 @@
       FS.track("add_cart", { n: x.n, sec: x.sec, p: priceOf(x), q: 1, up: 1 });
     });
     saveCart(); closeAll();
-    toast("اتضاف للسلة ✓");
+    toast("انضاف للسلة");
   }
   function addCombo(id) {
     var c = S.combos.filter(function (x) { return x.id === id; })[0];
     if (!c) return;
     cart.push({ n: c.n, p: c.p, q: 1, sec: "combo", addons: [], combo: 1, parts: c.parts });
     FS.track("add_cart", { n: c.n, sec: "combo", p: c.p, q: 1, combo: 1 });
-    saveCart(); toast("الكومبو اتضاف ✓ وفّرت " + (c.was - c.p) + " " + CUR);
+    saveCart(); toast("انضاف الكومبو — وفرت " + (c.was - c.p) + " " + CUR);
   }
   function rmLine(i) { cart.splice(i, 1); saveCart(); renderCart(); }
 
   function openCart() {
-    if (!cart.length) { toast("السلة فاضية"); return; }
+    if (!cart.length) { toast("سلتك فاضية"); return; }
     FS.track("cart_open", { n: cartCount(), v: cartSub() });
     renderCart(); openSheet("csheet");
   }
@@ -380,23 +351,20 @@
       $("cUpsell").classList.remove("hidden");
     } else $("cUpsell").classList.add("hidden");
 
-    var sub = cartSub(), off = offerDiscount(), del = mode === "دليفري" ? S.order.deliveryFee : 0;
+    var sub = cartSub(), del = mode === "توصيل" ? S.order.deliveryFee : 0;
     $("cSub").textContent = FS.money(sub);
-    $("cOffRow").classList.toggle("hidden", off.amount <= 0);
-    $("cOffLb").textContent = off.label;
-    $("cOff").textContent = FS.money(off.amount);
     $("cDelRow").classList.toggle("hidden", !del);
     $("cDel").textContent = del;
-    $("cTot").textContent = FS.money(sub - off.amount + del);
+    $("cTot").textContent = FS.money(sub + del);
 
     $("modes").innerHTML = S.order.modes.map(function (m) {
       return '<button class="' + (m === mode ? "on" : "") + '" onclick="App.setMode(\'' + m + '\')">' + m + "</button>";
     }).join("");
-    $("tableBlk").classList.toggle("hidden", mode !== "صالة");
-    $("addrBlk").classList.toggle("hidden", mode !== "دليفري");
-    var opt = mode === "صالة";
+    $("tableBlk").classList.toggle("hidden", mode !== "محلي");
+    $("addrBlk").classList.toggle("hidden", mode !== "توصيل");
+    var opt = mode === "محلي";
     $("nameHint").textContent = opt ? "(اختياري)" : "(مطلوب)";
-    $("phoneHint").textContent = opt ? "(اختياري — عشان نبعتلك عروضنا)" : "(مطلوب — عشان نتواصل معاك)";
+    $("phoneHint").textContent = opt ? "(اختياري — نرسل لك عروضنا)" : "(مطلوب — للتواصل)";
     if (!$("tableNo").options.length) {
       var o = "";
       for (var i = 1; i <= S.order.tables; i++) o += "<option>" + i + "</option>";
@@ -408,7 +376,7 @@
     cart.push({ n: x.n, p: priceOf(x), q: 1, sec: x.sec, addons: [], up: 1 });
     FS.track("upsell_accept", { n: x.n, p: priceOf(x), at: "cart" });
     FS.track("add_cart", { n: x.n, sec: x.sec, p: priceOf(x), q: 1, up: 1 });
-    saveCart(); renderCart(); toast("اتضاف ✓");
+    saveCart(); renderCart(); toast("انضاف");
   }
   function setMode(m) { mode = m; renderCart(); }
 
@@ -417,29 +385,29 @@
   function sendOrder() {
     if (sending) return;
     var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
-    var phoneOk = /^01[0125][0-9]{8}$/.test(phone);
+    var phoneOk = /^05[0-9]{8}$/.test(phone);
 
     // صالة: الترابيزة كفاية. تيك أواي/دليفري: محتاجين نوصلّك
-    if (mode !== "صالة") {
-      if (!name) { toast("اكتب اسمك 🙏"); $("cName").focus(); return; }
-      if (!phoneOk) { toast("اكتب رقم موبايل صح — ١١ رقم يبدأ بـ 01"); $("cPhone").focus(); return; }
+    if (mode !== "محلي") {
+      if (!name) { toast("اكتب اسمك"); $("cName").focus(); return; }
+      if (!phoneOk) { toast("اكتب رقم جوال صحيح يبدأ بـ 05"); $("cPhone").focus(); return; }
     } else if (phone && !phoneOk) {
-      toast("الرقم مش مظبوط — ١١ رقم يبدأ بـ 01"); $("cPhone").focus(); return;
+      toast("رقم الجوال غير صحيح — 10 أرقام تبدأ بـ 05"); $("cPhone").focus(); return;
     }
-    if (mode === "دليفري" && !addr) { toast("اكتب العنوان 🙏"); $("cAddr").focus(); return; }
+    if (mode === "توصيل" && !addr) { toast("اكتب العنوان"); $("cAddr").focus(); return; }
 
     sending = true;
-    var sub = cartSub(), off = offerDiscount(), del = mode === "دليفري" ? S.order.deliveryFee : 0;
-    var total = sub - off.amount + del;
+    var sub = cartSub(), del = mode === "توصيل" ? S.order.deliveryFee : 0;
+    var total = sub + del;
     var upV = cart.filter(function (l) { return l.up; }).reduce(function (a, l) { return a + l.p * l.q; }, 0);
     var adV = cart.reduce(function (a, l) { return a + (l.addonV || 0) * l.q; }, 0);
     var oid = "F" + String(Date.now()).slice(-5);
 
     FS.pushOrder({
       id: oid, t: Date.now(), lines: cart.slice(), total: total,
-      off: off.amount, offLb: off.label, del: del, up: upV, addon: adV,
-      mode: mode, table: mode === "صالة" ? $("tableNo").value : null,
-      name: name, phone: phone, addr: mode === "دليفري" ? addr : ""
+      off: 0, offLb: "", del: del, up: upV, addon: adV,
+      mode: mode, table: mode === "محلي" ? $("tableNo").value : null,
+      name: name, phone: phone, addr: mode === "توصيل" ? addr : ""
     });
     if (phone) FS.pushCustomer({ t: Date.now(), phone: phone, name: name, spent: total });
 
@@ -457,7 +425,7 @@
     $("lowBlk").classList.add("hidden");
     $("rateHint").textContent = "دوسة واحدة وتفرق معانا";
     $("stars").innerHTML = [1, 2, 3, 4, 5].map(function (i) {
-      return '<button onclick="App.rate(' + i + ')">⭐</button>';
+      return '<button onclick="App.rate(' + i + ')">★</button>';
     }).join("");
 
     // الولاء
@@ -468,8 +436,8 @@
     FS.set(FS.K.loy, loy);
     paintStamps("stampsRow", reached ? goal : loy.n);
     $("stampMsg").textContent = reached
-      ? "🎉 كمّلت " + goal + " زيارات — " + S.loyalty.reward
-      : "فاضلك " + (goal - loy.n) + " زيارات وتاخد " + S.loyalty.reward;
+      ? "كملت " + goal + " زيارات — " + S.loyalty.reward
+      : "باقي لك " + (goal - loy.n) + " زيارات وتحصل على " + S.loyalty.reward;
 
     setTimeout(function () { openSheet("done"); }, 350);
     FS.track("order_done", { v: total });
@@ -486,20 +454,20 @@
     FS.pushReview({ t: Date.now(), stars: n, note: "", sent: n >= S.review.threshold ? "google" : "owner" });
 
     if (n >= S.review.threshold) {
-      $("rateHint").innerHTML = "شكراً ليك ❤️ ممكن تكتبها على جوجل؟";
+      $("rateHint").innerHTML = "شكرًا لك — تكتبها لنا في قوقل؟";
       setTimeout(function () {
         if (S.review.googleUrl.indexOf("REPLACE") < 0) window.open(S.review.googleUrl, "_blank");
-        else toast("(في النسخة الحقيقية بيفتح لينك تقييم جوجل)");
+        else toast("(في النسخة الفعلية يفتح رابط تقييم قوقل)");
       }, 900);
     } else {
-      $("rateHint").textContent = "آسفين — قولنا إيه اللي حصل؟";
+      $("rateHint").textContent = "نعتذر منك — وش صار؟";
       $("lowBlk").classList.remove("hidden");
     }
   }
   /* الشكوى بتروح للوحة الأونر مباشرة — مش لجوجل */
   function sendComplaint() {
     var note = $("rNote").value.trim();
-    if (!note) { toast("اكتب الملاحظة الأول 🙏"); $("rNote").focus(); return; }
+    if (!note) { toast("اكتب ملاحظتك أول"); $("rNote").focus(); return; }
     var revs = FS.get(FS.K.rev, []);
     if (revs.length) {
       revs[revs.length - 1].note = note;
@@ -507,14 +475,14 @@
       FS.emit("review", revs[revs.length - 1]);
     }
     FS.track("complaint", { note: note });
-    $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px;text-align:center'>وصلت لصاحب المطعم مباشرة — هيهتم بيها 🙏</div>";
+    $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px;text-align:center'>وصلت ملاحظتك لصاحب المطعم مباشرة</div>";
   }
 
   function openLoyalty() {
     var loy = FS.get(FS.K.loy, { n: 0 });
     $("loyN").textContent = (loy.n || 0) + "/" + S.loyalty.goal;
     paintStamps("loyStamps", loy.n || 0);
-    $("loyMsg").innerHTML = "كل ما تطلب من المنيو بتاخد ختم. لما تكمّل " + S.loyalty.goal + " تاخد " + S.loyalty.reward;
+    $("loyMsg").innerHTML = "مع كل طلب تجمع ختم. إذا كملت " + S.loyalty.goal + " أختام لك " + S.loyalty.reward;
     openSheet("loy");
   }
 
@@ -532,7 +500,6 @@
     splash();
     renderCombos(); renderPops(); renderSections(); renderQuickNav(); renderFoot();
     paintFab();
-    offerTick(); setInterval(offerTick, 1000);
     FS.track("visit", { ref: document.referrer || "" });
 
     $("q").addEventListener("input", function (e) { search(e.target.value); });
@@ -544,7 +511,6 @@
     FS.onMsg(function (m) {
       if (m.type === "control") {
         if (curSec) openSection(curSec.id); else { renderPops(); }
-        offerTick();
       }
     });
   }

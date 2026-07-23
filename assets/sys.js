@@ -85,7 +85,7 @@
     if (S.profit.indexOf(rec.n) > -1) W += 3;
     if (rec.isNew) W += 1.5;
     if (rec.sec === "extras") W *= 0.35;          // الإضافات بتتشاف أقل كصفحة
-    if (rec.price > 300) W *= 0.25;               // العائلي أقل طلبًا
+    if (rec.price > 70) W *= 0.25;                // العائلي أقل طلبًا
     return W;
   }
 
@@ -107,7 +107,7 @@
     var pool = ITEMS.map(function (r) { return { r: r, w: weightOf(r) }; });
     var totalW = pool.reduce(function (a, b) { return a + b.w; }, 0);
     var rnd = rngFrom(20260722);
-    var NAMES = ["أحمد", "محمود", "مصطفى", "كريم", "عمرو", "سارة", "منة", "ياسمين", "هاجر", "زياد"];
+    var NAMES = ["فهد", "سلطان", "عبدالله", "محمد", "خالد", "نورة", "سارة", "العنود", "ريم", "مشعل"];
     var evs = [], orders = [], reviews = [], customers = [];
     var now = new Date(); now.setMinutes(0, 0, 0);
     var addonsOf = function (sec) { return w.SALES.addons[sec] || w.SALES.addons._default; };
@@ -170,12 +170,12 @@
           if (rnd() < 0.62) {
             var total = lines.reduce(function (a, l) { return a + l.p * l.q; }, 0);
             var oid = "D" + (1001 + orders.length);
-            var omode = rnd() < .5 ? "صالة" : (rnd() < .6 ? "دليفري" : "تيك أواي");
+            var omode = rnd() < .5 ? "محلي" : (rnd() < .6 ? "توصيل" : "سفري");
             orders.push({
               id: oid, t: ts + 260000, lines: lines, total: total,
               up: upRev, addon: adRev,
               mode: omode,
-              table: omode === "صالة" ? 1 + Math.floor(rnd() * w.SALES.order.tables) : null,
+              table: omode === "محلي" ? 1 + Math.floor(rnd() * w.SALES.order.tables) : null,
               demo: 1
             });
             evs.push({ t: ts + 260000, e: "order", vid: vid, v: total, up: upRev, ad: adRev, demo: 1 });
@@ -185,7 +185,7 @@
               var st = rnd() < 0.78 ? 5 : (rnd() < 0.6 ? 4 : (rnd() < .6 ? 3 : 2));
               reviews.push({
                 t: ts + 900000, stars: st, demo: 1,
-                note: st <= 3 ? ["الطلب اتأخر شوية", "البطاطس كانت باردة", "العدد كان ناقص صنف"][Math.floor(rnd() * 3)] : "",
+                note: st <= 3 ? ["الطلب تأخر شوي", "البطاطس وصلت باردة", "الطلب كان ناقص صنف"][Math.floor(rnd() * 3)] : "",
                 sent: st >= 4 ? "google" : "owner"
               });
             }
@@ -193,7 +193,7 @@
             if (rnd() < 0.18) {
               customers.push({
                 t: ts + 300000, demo: 1,
-                phone: "01" + [0, 1, 2, 5][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 100000000)).padStart(8, "0"),
+                phone: "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 10000000)).padStart(7, "0"),
                 name: NAMES[Math.floor(rnd() * 10)],
                 spent: total
               });
@@ -210,16 +210,16 @@
       o.seen = true;
       if (rnd() < 0.4) {
         o.name = NAMES[Math.floor(rnd() * 10)];
-        o.phone = "01" + [0, 1, 2, 5][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 100000000)).padStart(8, "0");
+        o.phone = "05" + [0, 3, 5, 6][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 10000000)).padStart(7, "0");
       }
-      if (o.mode === "دليفري") o.addr = ["ش عبد السلام عارف — الحي الأول", "ش أحمد شوقي — بجوار المستشفى", "المنطقة الصناعية — عمارة 12", "ش مصطفى كامل — الدور التالت"][Math.floor(rnd() * 4)];
+      if (o.mode === "توصيل") o.addr = ["حي النرجس — شارع أنس بن مالك", "حي الياسمين — طريق الملك عبدالعزيز", "حي الملقا — شارع الثمامة", "حي قرطبة — الدائري الشرقي"][Math.floor(rnd() * 4)];
     });
     if (orders.length > 1) {
       orders[orders.length - 1].status = "new";
       orders[orders.length - 2].status = "prep";
     }
     set(K.ev, evs); set(K.ord, orders); set(K.rev, reviews); set(K.cus, customers);
-    set(K.seed, { v: 2, at: Date.now(), days: days });
+    set(K.seed, { v: 3, at: Date.now(), days: days });
   }
 
   /* ---------------- تتبّع حقيقي ---------------- */
@@ -275,11 +275,7 @@
   function control() {
     return Object.assign({
       soldOut: [],          // أسماء أصناف نفدت
-      prices: {},           // { "اسم الصنف": سعر جديد }
-      offerOn: null,        // null = زي الإعدادات
-      offerTitle: "",
-      offerBody: "",
-      pinned: []            // أصناف مثبّتة فوق
+      prices: {}            // { "اسم الصنف": سعر جديد }
     }, get(K.ctl, {}));
   }
   function saveControl(c) { set(K.ctl, c); emit("control", c); }
@@ -394,21 +390,6 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-  function offerLive() {
-    var c = control(), s = w.SALES.offer;
-    var on = c.offerOn == null ? s.on : c.offerOn;
-    if (!on) return null;
-    var h = new Date().getHours();
-    var active = s.from <= s.to ? (h >= s.from && h < s.to) : (h >= s.from || h < s.to);
-    var end = new Date(); end.setHours(s.to, 0, 0, 0);
-    if (end < new Date()) end = new Date(end.getTime() + 86400000);
-    return {
-      active: active,
-      title: c.offerTitle || s.title,
-      body: c.offerBody || s.body,
-      endsAt: end.getTime(), from: s.from, to: s.to, pct: s.pct
-    };
-  }
 
   w.FS = {
     K: K, get: get, set: set, emit: emit, onMsg: onMsg,
@@ -417,10 +398,10 @@
     pushOrder: pushOrder, pushReview: pushReview, pushCustomer: pushCustomer,
     setOrderStatus: setOrderStatus, markAllSeen: markAllSeen,
     control: control, saveControl: saveControl, agg: agg,
-    money: money, esc: esc, offerLive: offerLive, cid: cid,
+    money: money, esc: esc, cid: cid,
     ensureSeed: function () {
       var s = get(K.seed, null);
-      if (!s || s.v !== 2) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد
+      if (!s || s.v !== 3) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد
         [K.ev, K.ord, K.rev, K.cus, K.ctl].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } });
         buildIndex(); seedDemo(30);
       } else buildIndex();
