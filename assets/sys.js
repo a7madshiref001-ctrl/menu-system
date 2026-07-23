@@ -107,6 +107,7 @@
     var pool = ITEMS.map(function (r) { return { r: r, w: weightOf(r) }; });
     var totalW = pool.reduce(function (a, b) { return a + b.w; }, 0);
     var rnd = rngFrom(20260722);
+    var NAMES = ["أحمد", "محمود", "مصطفى", "كريم", "عمرو", "سارة", "منة", "ياسمين", "هاجر", "زياد"];
     var evs = [], orders = [], reviews = [], customers = [];
     var now = new Date(); now.setMinutes(0, 0, 0);
     var addonsOf = function (sec) { return w.SALES.addons[sec] || w.SALES.addons._default; };
@@ -168,12 +169,13 @@
           // إرسال الطلب
           if (rnd() < 0.62) {
             var total = lines.reduce(function (a, l) { return a + l.p * l.q; }, 0);
-            var oid = "D" + (ts % 100000);
+            var oid = "D" + (1001 + orders.length);
+            var omode = rnd() < .5 ? "صالة" : (rnd() < .6 ? "دليفري" : "تيك أواي");
             orders.push({
               id: oid, t: ts + 260000, lines: lines, total: total,
               up: upRev, addon: adRev,
-              mode: rnd() < .5 ? "صالة" : (rnd() < .6 ? "دليفري" : "تيك أواي"),
-              table: 1 + Math.floor(rnd() * w.SALES.order.tables),
+              mode: omode,
+              table: omode === "صالة" ? 1 + Math.floor(rnd() * w.SALES.order.tables) : null,
               demo: 1
             });
             evs.push({ t: ts + 260000, e: "order", vid: vid, v: total, up: upRev, ad: adRev, demo: 1 });
@@ -192,7 +194,7 @@
               customers.push({
                 t: ts + 300000, demo: 1,
                 phone: "01" + [0, 1, 2, 5][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 100000000)).padStart(8, "0"),
-                name: ["أحمد", "محمود", "مصطفى", "كريم", "عمرو", "سارة", "منة", "ياسمين", "هاجر", "زياد"][Math.floor(rnd() * 10)],
+                name: NAMES[Math.floor(rnd() * 10)],
                 spent: total
               });
             }
@@ -201,8 +203,23 @@
       }
     }
     evs.sort(function (a, b) { return a.t - b.t; });
+    orders.sort(function (a, b) { return a.t - b.t; });
+    // حالات الأوردرات التجريبية: كلها اتسلمت، وشوية ملغية، وآخر اتنين لسه شغالين عشان الصفحة تبان حية
+    orders.forEach(function (o) {
+      o.status = rnd() < 0.02 ? "cancel" : "done";
+      o.seen = true;
+      if (rnd() < 0.4) {
+        o.name = NAMES[Math.floor(rnd() * 10)];
+        o.phone = "01" + [0, 1, 2, 5][Math.floor(rnd() * 4)] + String(Math.floor(rnd() * 100000000)).padStart(8, "0");
+      }
+      if (o.mode === "دليفري") o.addr = ["ش عبد السلام عارف — الحي الأول", "ش أحمد شوقي — بجوار المستشفى", "المنطقة الصناعية — عمارة 12", "ش مصطفى كامل — الدور التالت"][Math.floor(rnd() * 4)];
+    });
+    if (orders.length > 1) {
+      orders[orders.length - 1].status = "new";
+      orders[orders.length - 2].status = "prep";
+    }
     set(K.ev, evs); set(K.ord, orders); set(K.rev, reviews); set(K.cus, customers);
-    set(K.seed, { at: Date.now(), days: days });
+    set(K.seed, { v: 2, at: Date.now(), days: days });
   }
 
   /* ---------------- تتبّع حقيقي ---------------- */
@@ -233,9 +250,23 @@
     return row;
   }
   function pushOrder(order) {
+    if (!order.status) order.status = "new";
+    if (order.seen == null) order.seen = false;
     var o = get(K.ord, []); o.push(order); set(K.ord, o);
     track("order", { v: order.total, up: order.up, ad: order.addon });
     emit("order", order);
+  }
+  function setOrderStatus(id, st) {
+    var o = get(K.ord, []), hit = null;
+    o.forEach(function (x) { if (x.id === id) { x.status = st; x.seen = true; hit = x; } });
+    if (hit) { set(K.ord, o); emit("order_update", hit); }
+    return hit;
+  }
+  function markAllSeen() {
+    var o = get(K.ord, []), dirty = false;
+    o.forEach(function (x) { if (!x.seen) { x.seen = true; dirty = true; } });
+    if (dirty) set(K.ord, o);
+    return dirty;
   }
   function pushReview(r) { var a = get(K.rev, []); a.push(r); set(K.rev, a); emit("review", r); }
   function pushCustomer(c) { var a = get(K.cus, []); a.push(c); set(K.cus, a); emit("customer", c); }
@@ -262,9 +293,12 @@
     var revs = get(K.rev, []).filter(function (r) { return r.t >= since && (includeDemo || !r.demo); });
     var cus = get(K.cus, []).filter(function (r) { return r.t >= since && (includeDemo || !r.demo); });
 
+    // الملغي مش بيتحسب في الإيراد ولا عدد الأوردرات
+    var act = ords.filter(function (x) { return (x.status || "done") !== "cancel"; });
+
     var o = {
       days: days, events: evs.length,
-      visits: 0, itemViews: 0, addCart: 0, orders: ords.length,
+      visits: 0, itemViews: 0, addCart: 0, orders: act.length,
       revenue: 0, upRevenue: 0, addonRevenue: 0,
       upShown: 0, upAccept: 0,
       byHour: new Array(24).fill(0),
@@ -300,7 +334,7 @@
       else if (r.e === "upsell_accept") o.upAccept++;
     });
 
-    ords.forEach(function (od) {
+    act.forEach(function (od) {
       o.revenue += od.total || 0;
       o.upRevenue += od.up || 0;
       o.addonRevenue += od.addon || 0;
@@ -381,9 +415,16 @@
     items: function () { return ITEMS; }, byName: function (n) { return BYNAME[n]; },
     buildIndex: buildIndex, seedDemo: seedDemo, track: track,
     pushOrder: pushOrder, pushReview: pushReview, pushCustomer: pushCustomer,
+    setOrderStatus: setOrderStatus, markAllSeen: markAllSeen,
     control: control, saveControl: saveControl, agg: agg,
     money: money, esc: esc, offerLive: offerLive, cid: cid,
-    ensureSeed: function () { if (!get(K.seed, null)) { buildIndex(); seedDemo(30); } else buildIndex(); },
+    ensureSeed: function () {
+      var s = get(K.seed, null);
+      if (!s || s.v !== 2) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد
+        [K.ev, K.ord, K.rev, K.cus, K.ctl].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } });
+        buildIndex(); seedDemo(30);
+      } else buildIndex();
+    },
     reset: function () { Object.keys(K).forEach(function (k) { if (k !== "theme") localStorage.removeItem(K[k]); }); }
   };
 })(window);

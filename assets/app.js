@@ -355,6 +355,9 @@
     }).join("");
     $("tableBlk").classList.toggle("hidden", mode !== "صالة");
     $("addrBlk").classList.toggle("hidden", mode !== "دليفري");
+    var opt = mode === "صالة";
+    $("nameHint").textContent = opt ? "(اختياري)" : "(مطلوب)";
+    $("phoneHint").textContent = opt ? "(اختياري — عشان نبعتلك عروضنا)" : "(مطلوب — عشان نتواصل معاك)";
     if (!$("tableNo").options.length) {
       var o = "";
       for (var i = 1; i <= S.order.tables; i++) o += "<option>" + i + "</option>";
@@ -370,56 +373,49 @@
   }
   function setMode(m) { mode = m; renderCart(); }
 
-  /* ---------- إرسال الطلب ---------- */
+  /* ---------- إرسال الأوردر للسيستم ---------- */
+  var sending = false;
   function sendOrder() {
-    var name = $("cName").value.trim(), phone = $("cPhone").value.trim();
-    if (!name) { toast("اكتب اسمك 🙏"); $("cName").focus(); return; }
-    if (mode === "دليفري" && !$("cAddr").value.trim()) { toast("اكتب العنوان"); $("cAddr").focus(); return; }
+    if (sending) return;
+    var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
+    var phoneOk = /^01[0125][0-9]{8}$/.test(phone);
 
+    // صالة: الترابيزة كفاية. تيك أواي/دليفري: محتاجين نوصلّك
+    if (mode !== "صالة") {
+      if (!name) { toast("اكتب اسمك 🙏"); $("cName").focus(); return; }
+      if (!phoneOk) { toast("اكتب رقم موبايل صح — ١١ رقم يبدأ بـ 01"); $("cPhone").focus(); return; }
+    } else if (phone && !phoneOk) {
+      toast("الرقم مش مظبوط — ١١ رقم يبدأ بـ 01"); $("cPhone").focus(); return;
+    }
+    if (mode === "دليفري" && !addr) { toast("اكتب العنوان 🙏"); $("cAddr").focus(); return; }
+
+    sending = true;
     var sub = cartSub(), off = offerDiscount(), del = mode === "دليفري" ? S.order.deliveryFee : 0;
     var total = sub - off.amount + del;
     var upV = cart.filter(function (l) { return l.up; }).reduce(function (a, l) { return a + l.p * l.q; }, 0);
     var adV = cart.reduce(function (a, l) { return a + (l.addonV || 0) * l.q; }, 0);
     var oid = "F" + String(Date.now()).slice(-5);
 
-    var order = {
-      id: oid, t: Date.now(), lines: cart.slice(), total: total, up: upV, addon: adV,
+    FS.pushOrder({
+      id: oid, t: Date.now(), lines: cart.slice(), total: total,
+      off: off.amount, offLb: off.label, del: del, up: upV, addon: adV,
       mode: mode, table: mode === "صالة" ? $("tableNo").value : null,
-      name: name, phone: phone, addr: $("cAddr").value.trim()
-    };
-    FS.pushOrder(order);
-    if (phone) FS.pushCustomer({ t: Date.now(), phone: phone, name: name, spent: total });
-
-    // نص الواتساب
-    var txt = "*طلب جديد — مطعم فرندس*%0Aرقم الطلب: " + oid + "%0A—————%0A";
-    cart.forEach(function (l) {
-      txt += "• " + l.n + (l.q > 1 ? " ×" + l.q : "") + " — " + (l.p * l.q) + " " + CUR + "%0A";
-      if (l.addons && l.addons.length) txt += "   (" + l.addons.join(" + ") + ")%0A";
+      name: name, phone: phone, addr: mode === "دليفري" ? addr : ""
     });
-    txt += "—————%0A";
-    if (off.amount) txt += "خصم " + off.label + ": −" + off.amount + " " + CUR + "%0A";
-    if (del) txt += "توصيل: " + del + " " + CUR + "%0A";
-    txt += "*الإجمالي: " + total + " " + CUR + "*%0A—————%0A";
-    txt += "الاسم: " + name + "%0A";
-    if (phone) txt += "الموبايل: " + phone + "%0A";
-    txt += "النوع: " + mode + "%0A";
-    if (mode === "صالة") txt += "ترابيزة رقم: " + $("tableNo").value + "%0A";
-    if (mode === "دليفري") txt += "العنوان: " + $("cAddr").value.trim() + "%0A";
-
-    window.open("https://wa.me/" + S.order.whatsapp + "?text=" + encodeURI(decodeURIComponent(txt)), "_blank");
+    if (phone) FS.pushCustomer({ t: Date.now(), phone: phone, name: name, spent: total });
 
     cart = []; saveCart();
     closeAll();
     showDone(oid, total);
+    setTimeout(function () { sending = false; }, 900);
   }
 
-  /* ---------- شاشة النجاح: تقييم + كوبون + ولاء ---------- */
+  /* ---------- شاشة النجاح: تقييم + ولاء ---------- */
   function showDone(oid, total) {
     rated = false;
     $("dOid").textContent = oid;
     $("rateBlk").classList.remove("hidden");
     $("lowBlk").classList.add("hidden");
-    $("couponBlk").classList.add("hidden");
     $("rateHint").textContent = "دوسة واحدة وتفرق معانا";
     $("stars").innerHTML = [1, 2, 3, 4, 5].map(function (i) {
       return '<button onclick="App.rate(' + i + ')">⭐</button>';
@@ -452,7 +448,6 @@
 
     if (n >= S.review.threshold) {
       $("rateHint").innerHTML = "شكراً ليك ❤️ ممكن تكتبها على جوجل؟";
-      giveCoupon();
       setTimeout(function () {
         if (S.review.googleUrl.indexOf("REPLACE") < 0) window.open(S.review.googleUrl, "_blank");
         else toast("(في النسخة الحقيقية بيفتح لينك تقييم جوجل)");
@@ -462,37 +457,25 @@
       $("lowBlk").classList.remove("hidden");
     }
   }
+  /* الشكوى بتروح للوحة الأونر مباشرة — مش لجوجل */
   function sendComplaint() {
     var note = $("rNote").value.trim();
+    if (!note) { toast("اكتب الملاحظة الأول 🙏"); $("rNote").focus(); return; }
     var revs = FS.get(FS.K.rev, []);
-    if (revs.length) { revs[revs.length - 1].note = note; FS.set(FS.K.rev, revs); }
+    if (revs.length) {
+      revs[revs.length - 1].note = note;
+      FS.set(FS.K.rev, revs);
+      FS.emit("review", revs[revs.length - 1]);
+    }
     FS.track("complaint", { note: note });
-    var txt = "شكوى من عميل عبر المنيو:%0A" + note;
-    window.open("https://wa.me/" + S.review.ownerWhatsapp + "?text=" + encodeURI(decodeURIComponent(txt)), "_blank");
-    $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px'>وصلت لصاحب المطعم — هيتواصل معاك 🙏</div>";
-    giveCoupon();
-  }
-  function giveCoupon() {
-    if (!S.coupon.on) return;
-    var code = "FR" + String(Math.floor(Math.random() * 9000) + 1000);
-    var exp = Date.now() + S.coupon.days * 86400000;
-    FS.set("fsys.coupon.v1", { code: code, exp: exp, pct: S.coupon.pct });
-    FS.track("coupon_issued", { code: code, pct: S.coupon.pct });
-    $("cCode").textContent = code;
-    $("cTxt").textContent = S.coupon.text + " — صالح " + S.coupon.days + " أيام";
-    $("couponBlk").classList.remove("hidden");
+    $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px;text-align:center'>وصلت لصاحب المطعم مباشرة — هيهتم بيها 🙏</div>";
   }
 
   function openLoyalty() {
     var loy = FS.get(FS.K.loy, { n: 0 });
     $("loyN").textContent = (loy.n || 0) + "/" + S.loyalty.goal;
     paintStamps("loyStamps", loy.n || 0);
-    var c = FS.get("fsys.coupon.v1", null);
-    var msg = "كل ما تطلب من المنيو بتاخد ختم. لما تكمّل " + S.loyalty.goal + " تاخد " + S.loyalty.reward;
-    if (c && c.exp > Date.now())
-      msg += "<br><br>🎟️ عندك كوبون <b style='color:var(--orange);direction:ltr;display:inline-block'>" + E(c.code) +
-        "</b> خصم " + c.pct + "٪ — قوله للكاشير";
-    $("loyMsg").innerHTML = msg;
+    $("loyMsg").innerHTML = "كل ما تطلب من المنيو بتاخد ختم. لما تكمّل " + S.loyalty.goal + " تاخد " + S.loyalty.reward;
     openSheet("loy");
   }
 

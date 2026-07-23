@@ -73,7 +73,6 @@
       <svg width="42" height="39" viewBox="0 0 100 92" style="opacity:.9"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
       <div class="ph" id="phones"></div>
       <div class="ad" id="addr"></div>
-      <div class="by">مدعوم بـ <a href="owner.html" target="_blank">سيستم المبيعات</a></div>
     </div>
   </div>
 </div>
@@ -141,11 +140,11 @@
     </div>
     <div id="tableBlk" class="field"><label>رقم الترابيزة</label><select id="tableNo"></select></div>
     <div id="addrBlk" class="field hidden"><label>العنوان</label><input id="cAddr" placeholder="المنطقة والشارع ورقم العمارة"></div>
-    <div class="field"><label>الاسم</label><input id="cName" placeholder="اسمك"></div>
-    <div class="field"><label>رقم الموبايل (عشان نبعتلك عروضنا)</label><input id="cPhone" type="tel" inputmode="numeric" placeholder="01xxxxxxxxx"></div>
+    <div class="field"><label>الاسم <span id="nameHint" style="color:var(--txt3);font-weight:400">(اختياري)</span></label><input id="cName" placeholder="اسمك"></div>
+    <div class="field"><label>رقم الموبايل <span id="phoneHint" style="color:var(--txt3);font-weight:400">(اختياري — عشان نبعتلك عروضنا)</span></label><input id="cPhone" type="tel" inputmode="numeric" placeholder="01xxxxxxxxx"></div>
   </div>
   <div class="foot" style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 70%,transparent);padding:14px 18px 6px;display:flex;gap:10px">
-    <button class="btn btn-g" style="flex:1" onclick="App.sendOrder()">إرسال الطلب على واتساب</button>
+    <button class="btn btn-g" style="flex:1" onclick="App.sendOrder()">تأكيد الأوردر ✓</button>
   </div>
 </div>
 
@@ -154,8 +153,9 @@
   <div class="grab"></div>
   <div class="wrap">
     <div class="tick">✓</div>
-    <h3>طلبك اتبعت 🎉</h3>
-    <div class="oid">رقم الطلب: <b id="dOid" class="mono"></b></div>
+    <h3>الأوردر وصل 🎉</h3>
+    <div class="oid">رقم الأوردر: <b id="dOid" class="mono"></b></div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:6px">الكاشير استلم طلبك وهيبدأ التحضير على طول</div>
 
     <div id="rateBlk">
       <div style="margin-top:22px;font-weight:700;font-size:15px">قيّم تجربتك معانا</div>
@@ -166,11 +166,7 @@
     <div id="lowBlk" class="hidden" style="margin-top:14px;text-align:right">
       <div class="field"><label>إيه اللي مضايقك؟ هيوصل لصاحب المطعم شخصيًا</label>
         <input id="rNote" placeholder="اكتب بصراحة…"></div>
-      <button class="btn btn-p" style="width:100%" onclick="App.sendComplaint()">ابعت لصاحب المطعم</button>
-    </div>
-
-    <div id="couponBlk" class="hidden">
-      <div class="coupon"><b id="cCode"></b><span id="cTxt"></span></div>
+      <button class="btn btn-p" style="width:100%" onclick="App.sendComplaint()">ابعت الملاحظة</button>
     </div>
 
     <div id="stampBlk" style="margin-top:16px">
