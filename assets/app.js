@@ -94,6 +94,12 @@
         '<div class="tx"><b>' + E(s.title) + "</b><span>" + count + " صنف</span></div></div>";
     }).join("");
   }
+  function renderQuickNav() {
+    $("quicknav").innerHTML = M.sections.map(function (s) {
+      return '<div class="qchip" onclick="App.openSection(\'' + E(s.id) + '\')">' +
+        '<span class="e">' + E(s.emoji || "") + "</span>" + E(s.title) + "</div>";
+    }).join("");
+  }
   function renderFoot() {
     $("phones").innerHTML = (M.brand.phones || []).map(function (p) {
       return '<a href="tel:' + E(p) + '">' + E(p) + "</a>";
@@ -113,8 +119,11 @@
     var nq = norm(q);
     var hits = FS.items().filter(function (r) { return norm(r.n).indexOf(nq) > -1; }).slice(0, 40);
     FS.track("search", { q: q, hits: hits.length });
-    res.innerHTML = '<div class="cat"><h3>نتايج البحث (' + hits.length + ")</h3>" +
-      (hits.length ? hits.map(itemRow).join("") : '<div class="empty">مفيش صنف بالاسم ده 🤔</div>') + "</div>";
+    res.innerHTML = '<div class="catblock" style="margin-top:14px">' +
+      '<div class="ch"><span class="bar"></span><b>نتايج البحث</b><span class="cnt">' + hits.length + " صنف</span></div>" +
+      '<div class="cat">' +
+      (hits.length ? hits.map(itemRow).join("") : '<div class="empty">مفيش صنف بالاسم ده 🤔</div>') +
+      "</div></div>";
   }
 
   /* ---------- صف صنف ---------- */
@@ -149,24 +158,54 @@
     FS.track("section", { sec: id });
     $("home").classList.add("hidden");
     $("secview").classList.add("on");
-    $("svTitle").textContent = s.title;
-    $("svDesc").textContent = s.desc || "";
+
+    var count = (s.cats || []).reduce(function (a, c) { return a + (c.items || []).length; }, 0);
+    $("svBanner").innerHTML =
+      '<img src="' + E(s.img) + '" alt=""><div class="ov"></div>' +
+      '<button class="back" onclick="App.home()">→ رجوع</button>' +
+      '<span class="cnt">' + count + " صنف · " + s.cats.length + " فئات</span>" +
+      '<div class="tx"><h2>' + E(s.emoji || "") + " " + E(s.title) + "</h2><p>" + E(s.desc || "") + "</p></div>";
+
     $("tabs").innerHTML = s.cats.map(function (c, i) {
-      return '<button class="' + (i === 0 ? "on" : "") + '" onclick="App.goCat(\'' + E(c.id) + '\',this)">' + E(c.title) + "</button>";
+      return '<button data-cat="' + E(c.id) + '" class="' + (i === 0 ? "on" : "") +
+        '" onclick="App.goCat(\'' + E(c.id) + '\',this)">' + E(c.title) + "</button>";
     }).join("");
-    $("svBody").innerHTML = s.cats.map(function (c) {
-      var items = FS.items().filter(function (r) { return r.cat === c.id; });
-      return '<div class="cat" id="cat-' + E(c.id) + '"><h3>' + E(c.title) +
-        (c.isNew ? ' <span class="chip chip-new">جديد</span>' : "") + "</h3>" +
-        items.map(itemRow).join("") + "</div>";
-    }).join("");
+    $("svBody").innerHTML = s.cats.map(catBlock).join("");
     window.scrollTo(0, 0);
+  }
+  /* كل فئة في بلوك واضح: هيدر بعدّاد + صفوف مفصولة */
+  function catBlock(c) {
+    var items = FS.items().filter(function (r) { return r.cat === c.id; });
+    return '<div class="catblock" id="cat-' + E(c.id) + '">' +
+      '<div class="ch"><span class="bar"></span><b>' + E(c.title) + "</b>" +
+      (c.isNew ? '<span class="chip chip-new">جديد</span>' : "") +
+      '<span class="cnt">' + items.length + " صنف</span></div>" +
+      '<div class="cat">' + items.map(itemRow).join("") + "</div></div>";
   }
   function goCat(id, btn) {
     [].forEach.call($("tabs").children, function (b) { b.classList.remove("on"); });
     btn.classList.add("on");
     var el = $("cat-" + id);
     if (el) window.scrollTo({ top: el.offsetTop - 116, behavior: "smooth" });
+  }
+  /* التاب بيتظلل لوحده مع السكرول */
+  function spy() {
+    if (!curSec || !$("secview").classList.contains("on")) return;
+    var y = window.scrollY + 132, active = null;
+    curSec.cats.forEach(function (c) {
+      var el = $("cat-" + c.id);
+      if (el && el.offsetTop <= y) active = c.id;
+    });
+    if (!active) active = curSec.cats[0].id;
+    // آخر الصفحة = آخر فئة (الفئات القصيرة في الآخر مش بتوصل لنقطة التفعيل)
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10)
+      active = curSec.cats[curSec.cats.length - 1].id;
+    [].forEach.call($("tabs").children, function (b) {
+      var on = b.getAttribute("data-cat") === active;
+      if (on && !b.classList.contains("on"))
+        b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      b.classList.toggle("on", on);
+    });
   }
   function home() {
     $("secview").classList.remove("on");
@@ -491,7 +530,7 @@
     document.documentElement.setAttribute("data-theme", FS.get(FS.K.theme, "dark"));
     FS.ensureSeed();
     splash();
-    renderCombos(); renderPops(); renderSections(); renderFoot();
+    renderCombos(); renderPops(); renderSections(); renderQuickNav(); renderFoot();
     paintFab();
     offerTick(); setInterval(offerTick, 1000);
     FS.track("visit", { ref: document.referrer || "" });
@@ -499,7 +538,8 @@
     $("q").addEventListener("input", function (e) { search(e.target.value); });
     window.addEventListener("scroll", function () {
       $("topbar").classList.toggle("solid", window.scrollY > 20);
-    });
+      spy();
+    }, { passive: true });
     // لو الأونر غيّر حاجة من اللوحة — يتحدث فورًا
     FS.onMsg(function (m) {
       if (m.type === "control") {
