@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;700;800&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/core.css?v=4">
-<link rel="stylesheet" href="assets/app.css?v=4">
+<link rel="stylesheet" href="assets/core.css?v=5">
+<link rel="stylesheet" href="assets/app.css?v=5">
 </head>
 <body>
 
@@ -153,7 +153,12 @@
     <div id="rateBlk">
       <div style="margin-top:22px;font-weight:700;font-size:15px">قيّم تجربتك</div>
       <div class="stars" id="stars"></div>
-      <div style="font-size:12px;color:var(--txt3)" id="rateHint">تقييمك يفرق معنا</div>
+      <div class="rate-val" id="rateVal"></div>
+      <div style="font-size:12px;color:var(--txt3)" id="rateHint">اضغط على النجمة وتقدر تغيّرها بأي وقت</div>
+      <button class="btn btn-maps hidden" id="mapsBtn" onclick="App.openMaps()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        قيّمنا على قوقل ماب
+      </button>
     </div>
 
     <div id="lowBlk" class="hidden" style="margin-top:14px;text-align:right">
@@ -190,9 +195,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="data/menu.js?v=4"></script>
-<script src="data/sales.js?v=4"></script>
-<script src="assets/sys.js?v=4"></script>
-<script src="assets/app.js?v=4"></script>
+<script src="data/menu.js?v=5"></script>
+<script src="data/sales.js?v=5"></script>
+<script src="assets/sys.js?v=5"></script>
+<script src="assets/app.js?v=5"></script>
 </body>
 </html>

@@ -7,10 +7,13 @@
   var CUR = M.brand.currency || "ج";
   var SZ = ["S", "M", "L"];
 
+  var lowHTML = null;
+  var RATE_LB = ["", "سيئ", "مو حلو", "عادي", "حلو", "ممتاز"];
+  var myRating = 0, myRevT = 0;
+
   var cart = FS.get(FS.K.cart, []);
   var cur = null;                    // الصنف المفتوح دلوقتي
   var mode = S.order.modes[0];
-  var rated = false;
 
   /* ---------- أدوات ---------- */
   function toast(msg) {
@@ -419,13 +422,18 @@
 
   /* ---------- شاشة النجاح: تقييم + ولاء ---------- */
   function showDone(oid, total) {
-    rated = false;
     $("dOid").textContent = oid;
     $("rateBlk").classList.remove("hidden");
+    if (lowHTML == null) lowHTML = $("lowBlk").innerHTML;
+    $("lowBlk").innerHTML = lowHTML;
     $("lowBlk").classList.add("hidden");
-    $("rateHint").textContent = "دوسة واحدة وتفرق معانا";
+    $("rateHint").textContent = "اضغط على النجمة وتقدر تغيّرها بأي وقت";
+    myRating = 0; myRevT = 0;
+    $("rateVal").textContent = "";
+    $("mapsBtn").classList.add("hidden");
     $("stars").innerHTML = [1, 2, 3, 4, 5].map(function (i) {
-      return '<button onclick="App.rate(' + i + ')">★</button>';
+      return '<button class="star" onclick="App.rate(' + i + ')" aria-label="' + i + '">' +
+        '<span class="ic">★</span><span class="no">' + i + "</span></button>";
     }).join("");
 
     // الولاء
@@ -448,32 +456,52 @@
     $(id).innerHTML = h;
   }
   function rate(n) {
-    if (rated) return; rated = true;
-    [].forEach.call($("stars").children, function (b, i) { b.classList.toggle("on", i < n); });
-    FS.track("review", { stars: n });
-    FS.pushReview({ t: Date.now(), stars: n, note: "", sent: n >= S.review.threshold ? "google" : "owner" });
+    myRating = n;
+    [].forEach.call($("stars").children, function (b, i) {
+      b.classList.toggle("on", i < n);
+      b.classList.toggle("peak", i === n - 1);
+    });
+    $("rateVal").textContent = RATE_LB[n];
+    $("rateVal").style.color = n >= S.review.threshold ? "var(--green)"
+      : (n >= 3 ? "var(--gold)" : "var(--red)");
 
-    if (n >= S.review.threshold) {
-      $("rateHint").innerHTML = "شكرًا لك — تكتبها لنا في قوقل؟";
-      setTimeout(function () {
-        if (S.review.googleUrl.indexOf("REPLACE") < 0) window.open(S.review.googleUrl, "_blank");
-        else toast("(في النسخة الفعلية يفتح رابط تقييم قوقل)");
-      }, 900);
-    } else {
-      $("rateHint").textContent = "نعتذر منك — وش صار؟";
-      $("lowBlk").classList.remove("hidden");
+    // يعدّل نفس التقييم بدل ما يضيف واحد جديد
+    var good = n >= S.review.threshold;
+    var revs = FS.get(FS.K.rev, []), hit = null;
+    for (var i = 0; i < revs.length; i++) if (revs[i].t === myRevT) hit = revs[i];
+    if (hit) { hit.stars = n; hit.sent = good ? "google" : "owner"; if (good) hit.note = ""; }
+    else {
+      myRevT = Date.now();
+      hit = { t: myRevT, stars: n, note: "", sent: good ? "google" : "owner" };
+      revs.push(hit);
     }
+    FS.set(FS.K.rev, revs);
+    FS.emit("review", hit);
+    FS.track("review", { stars: n });
+
+    if (lowHTML == null) lowHTML = $("lowBlk").innerHTML;
+    if (!good && $("lowBlk").innerHTML !== lowHTML) $("lowBlk").innerHTML = lowHTML;
+    $("mapsBtn").classList.toggle("hidden", !good);
+    $("lowBlk").classList.toggle("hidden", good);
+    $("rateHint").textContent = good
+      ? "شكرًا لك — تقدر تعدّل تقييمك بأي وقت"
+      : "نعتذر منك — قل لنا وش صار";
+  }
+  /* الزرار = ضغطة مباشرة من المستخدم فمش هيتبلوك زي الفتح التلقائي */
+  function openMaps() {
+    FS.track("google_review_click", { stars: myRating });
+    var u = S.review.googleUrl;
+    if (u.indexOf("REPLACE") < 0) window.open(u, "_blank", "noopener");
+    else toast("(في النسخة الفعلية يفتح تقييم قوقل ماب)");
   }
   /* الشكوى بتروح للوحة الأونر مباشرة — مش لجوجل */
   function sendComplaint() {
     var note = $("rNote").value.trim();
     if (!note) { toast("اكتب ملاحظتك أول"); $("rNote").focus(); return; }
-    var revs = FS.get(FS.K.rev, []);
-    if (revs.length) {
-      revs[revs.length - 1].note = note;
-      FS.set(FS.K.rev, revs);
-      FS.emit("review", revs[revs.length - 1]);
-    }
+    var revs = FS.get(FS.K.rev, []), hit = null;
+    for (var i = 0; i < revs.length; i++) if (revs[i].t === myRevT) hit = revs[i];
+    if (!hit && revs.length) hit = revs[revs.length - 1];
+    if (hit) { hit.note = note; FS.set(FS.K.rev, revs); FS.emit("review", hit); }
     FS.track("complaint", { note: note });
     $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px;text-align:center'>وصلت ملاحظتك لصاحب المطعم مباشرة</div>";
   }
@@ -520,7 +548,7 @@
     pickSize: pickSize, tglAddon: tglAddon, tglSug: tglSug, qty: qty,
     addToCart: addToCart, addCombo: addCombo, rmLine: rmLine, quickAdd: quickAdd,
     openCart: openCart, setMode: setMode, sendOrder: sendOrder,
-    rate: rate, sendComplaint: sendComplaint, openLoyalty: openLoyalty,
+    rate: rate, openMaps: openMaps, sendComplaint: sendComplaint, openLoyalty: openLoyalty,
     toggleTheme: toggleTheme, closeAll: closeAll
   };
   document.addEventListener("DOMContentLoaded", init);
