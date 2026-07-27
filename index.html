@@ -131,7 +131,15 @@
       <div class="lb">نوع الطلب</div>
       <div class="modes" id="modes"></div>
     </div>
-    <div id="tableBlk" class="field"><label>رقم الطاولة</label><select id="tableNo"></select></div>
+    <div class="blk hidden" style="margin-top:16px" id="payBlk">
+      <div class="lb">طريقة الدفع</div>
+      <div class="modes" id="payModes"></div>
+      <div id="payBox"></div>
+    </div>
+    <div id="tableBlk" class="field"><label>رقم الطاولة</label><select id="tableNo"></select>
+      <div id="tableHint" class="fhint hidden"></div></div>
+    <!-- مصيدة: مخفية عن الناس، البوتات بس اللي تعبّيها -->
+    <div class="trap" aria-hidden="true"><label>لقبك</label><input id="cNick" tabindex="-1" autocomplete="off"></div>
     <div id="addrBlk" class="field hidden"><label>العنوان</label><input id="cAddr" placeholder="الحي والشارع ورقم المبنى"></div>
     <div class="field"><label>الاسم <span id="nameHint" style="color:var(--txt3);font-weight:400">(اختياري)</span></label><input id="cName" placeholder="اسمك"></div>
     <div class="field"><label>رقم الجوال <span id="phoneHint" style="color:var(--txt3);font-weight:400">(اختياري — نرسل لك عروضنا)</span></label><input id="cPhone" type="tel" inputmode="numeric" placeholder="05xxxxxxxx"></div>
@@ -146,9 +154,9 @@
   <div class="grab"></div>
   <div class="wrap">
     <div class="tick">✓</div>
-    <h3>تم استلام طلبك</h3>
+    <h3 id="doneHead">تم استلام طلبك</h3>
     <div class="oid">رقم الطلب: <b id="dOid" class="mono"></b></div>
-    <div style="font-size:13px;color:var(--txt2);margin-top:6px">وصل طلبك للكاشير وبيبدأ تجهيزه الحين</div>
+    <div id="doneSub" style="font-size:13px;color:var(--txt2);margin-top:6px">وصل طلبك للكاشير وبيبدأ تجهيزه الحين</div>
 
     <div id="rateBlk">
       <div style="margin-top:22px;font-weight:700;font-size:15px">قيّم تجربتك</div>
@@ -184,8 +192,16 @@
   <div class="wrap">
     <svg width="44" height="41" viewBox="0 0 100 92" style="margin:0 auto;display:block"><path d="M6 14 C34 -4 74 0 95 22 L64 36 C54 27 42 26 33 32 L46 88 Z" fill="#F97316"/></svg>
     <h3 style="font-size:22px;font-weight:800;margin-top:10px">بطاقة الولاء</h3>
+    <div class="field loyph">
+      <label>رقم جوالك</label>
+      <div class="loyrow">
+        <input id="loyPhone" type="tel" inputmode="numeric" placeholder="05xxxxxxxx">
+        <button class="btn btn-p" onclick="App.loyLookup()">اعرض كرتي</button>
+      </div>
+    </div>
     <div class="big" id="loyN">0/5</div>
     <div class="stamps" id="loyStamps" style="margin:8px 0 12px"></div>
+    <div id="loyReward"></div>
     <div style="font-size:13.5px;color:var(--txt2);line-height:1.9" id="loyMsg"></div>
   </div>
   <div class="foot" style="padding:14px 18px 6px">

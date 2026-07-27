@@ -8,6 +8,8 @@
   var CUR = M.brand.currency || "ج";
   var DOW = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
   var ST = {
+    paywait: { t: "ينتظر الدفع", c: "st-pay" },
+    confirm: { t: "يحتاج تأكيد", c: "st-confirm" },
     "new": { t: "جديد", c: "st-new" },
     prep: { t: "قيد التجهيز", c: "st-prep" },
     done: { t: "تم التسليم", c: "st-done" },
@@ -95,7 +97,11 @@
 
     // أرقام النهاردة
     var today = new Date(); today.setHours(0, 0, 0, 0);
-    var tOrds = ords.filter(function (o) { return o.t >= today.getTime() && stOf(o) !== "cancel"; });
+    // الملغي واللي ينتظر تأكيد ما يُحسبون في مبيعات اليوم
+    var tOrds = ords.filter(function (o) {
+      var s = stOf(o);
+      return o.t >= today.getTime() && s !== "cancel" && s !== "confirm" && s !== "paywait";
+    });
     $("tOrd").textContent = FS.money(tOrds.length);
     $("tRev").textContent = FS.money(tOrds.reduce(function (a, o) { return a + (o.total || 0); }, 0));
     $("tNew").textContent = ords.filter(function (o) { return stOf(o) === "new" || stOf(o) === "prep"; }).length;
@@ -103,7 +109,7 @@
     // الفلاتر
     var counts = { all: ords.length };
     Object.keys(ST).forEach(function (k) { counts[k] = ords.filter(function (o) { return stOf(o) === k; }).length; });
-    var chips = [["all", "الكل"], ["new", "جديد"], ["prep", "قيد التجهيز"], ["done", "تم التسليم"], ["cancel", "ملغي"]];
+    var chips = [["all", "الكل"], ["paywait", "ينتظر الدفع"], ["confirm", "يحتاج تأكيد"], ["new", "جديد"], ["prep", "قيد التجهيز"], ["done", "تم التسليم"], ["cancel", "ملغي"]];
     $("fchips").innerHTML = chips.map(function (c) {
       return '<button class="' + (filter === c[0] ? "on" : "") + '" onclick="Own.setFilter(\'' + c[0] + '\')">' +
         c[1] + " <b>" + counts[c[0]] + "</b></button>";
@@ -120,17 +126,41 @@
       if (o.name) who += "<b>" + E(o.name) + "</b>";
       if (o.phone) who += '<a href="tel:' + E(o.phone) + '">' + E(o.phone) + "</a>";
       var acts = '<button class="btn btn-s" onclick="Own.printOrder(\'' + E(o.id) + '\')">طباعة الفاتورة</button>';
-      if (st === "new")
+      if (st === "paywait")
+        acts += '<button class="btn btn-g" onclick="Own.payOk(\'' + E(o.id) + '\')">المبلغ وصل ✓</button>' +
+          '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>' +
+          (o.phone ? '<button class="btn btn-cancel" onclick="Own.block(\'' + E(o.phone) + '\')">احظر الرقم</button>' : "");
+      else if (st === "confirm")
+        acts += '<button class="btn btn-g" onclick="Own.setSt(\'' + E(o.id) + '\',\'new\')">أكّدته — ودّه للمطبخ</button>' +
+          '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>' +
+          (o.phone ? '<button class="btn btn-cancel" onclick="Own.block(\'' + E(o.phone) + '\')">احظر الرقم</button>' : "");
+      else if (st === "new")
         acts += '<button class="btn btn-p" onclick="Own.setSt(\'' + E(o.id) + '\',\'prep\')">ابدأ التجهيز</button>' +
           '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>';
       else if (st === "prep")
         acts += '<button class="btn btn-g" onclick="Own.setSt(\'' + E(o.id) + '\',\'done\')">تم التسليم</button>' +
           '<button class="btn btn-cancel" onclick="Own.cancelOrder(\'' + E(o.id) + '\')">إلغاء</button>';
-      return '<div class="ordcard' + (st === "new" ? " is-new" : "") + '">' +
+      var warn = (o.flags && o.flags.length)
+        ? '<div class="oc-warn">⚠ ' + o.flags.map(E).join(" · ") +
+          (st === "confirm" ? " — كلّمه وأكّد قبل ما تبدأ التجهيز" : "") + "</div>"
+        : "";
+      // بلوك الدفع: المرجع اللي يطابقه الكاشير + التحذير اللي يمنع نصبة لقطة الشاشة
+      var payb = o.pay
+        ? '<div class="oc-pay' + (st === "paywait" ? " wait" : " ok") + '">' +
+          '<div class="pline"><span>' + E(o.pay.n) + "</span>" +
+          '<b class="mono">' + E(o.pay.to) + "</b></div>" +
+          '<div class="pline"><span>رقم العملية</span><b class="mono ref">' + E(o.pay.ref) + "</b></div>" +
+          (st === "paywait"
+            ? '<div class="pwarn">طابق المبلغ والمرجع من <b>إشعار محفظتك انت</b> — مو من لقطة شاشة العميل</div>'
+            : '<div class="pdone">✓ الدفع تأكد' + (o.payAt ? " — " + fmtTime(o.payAt) : "") + "</div>") +
+          "</div>"
+        : "";
+      return '<div class="ordcard' + (st === "new" ? " is-new" : "") +
+        (st === "confirm" ? " is-confirm" : "") + (st === "paywait" ? " is-pay" : "") + '">' +
         '<div class="oc-top"><b class="oc-id">#' + E(o.id) + '</b>' +
         '<span class="stchip ' + meta.c + '">' + meta.t + "</span>" +
         '<span class="oc-time">' + fmtTime(o.t) + "</span></div>" +
-        '<div class="oc-who">' + who + "</div>" +
+        '<div class="oc-who">' + who + "</div>" + warn + payb +
         (o.addr ? '<div class="oc-addr">العنوان: ' + E(o.addr) + "</div>" : "") +
         '<div class="oc-lines">' + linesText(o) + "</div>" +
         '<div class="oc-foot"><b class="oc-tot">' + FS.money(o.total || 0) + " " + CUR + '</b><div class="sp"></div>' + acts + "</div>" +
@@ -156,11 +186,48 @@
     $("ordBadge").classList.toggle("hidden", n === 0);
   }
 
-  function setSt(id, st) { FS.setOrderStatus(id, st); refreshOrders(false); paintStats(); }
+  function toast(msg, ms) {
+    var t = $("otoast"); if (!t) return;
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { t.classList.remove("show"); }, ms || 3600);
+  }
+
+  function setSt(id, st) {
+    var r = FS.setOrderStatus(id, st);
+    // «تم التسليم» هي اللحظة اللي يُحسب فيها الختم — نقول للإدارة وش صار
+    if (st === "done" && r.loy) {
+      if (r.loy.err) toast("الطلب تسلّم — بس بدون ختم: " + r.loy.err);
+      else if (r.loy.reward)
+        toast("🎉 " + r.loy.phone + " كمّل " + r.loy.goal + " أختام — كود الهدية: " + r.loy.reward.code, 9000);
+      else toast("تسلّم — ختم لـ " + r.loy.phone + " (" + r.loy.n + "/" + r.loy.goal + ")");
+    }
+    refreshOrders(false); paintStats(); paintSecurity();
+  }
   function cancelOrder(id) {
     if (!confirm("متأكد تلغي الطلب #" + id + "؟")) return;
     FS.setOrderStatus(id, "cancel");
     refreshOrders(false); paintStats();
+  }
+  /* الكاشير شاف المبلغ في محفظته → الطلب يروح للمطبخ على طول.
+     المدفوع ما يحتاج يمر على طابور «يحتاج تأكيد» — المبلغ هو التأكيد. */
+  function payOk(id) {
+    var o = FS.get(FS.K.ord, []).filter(function (x) { return x.id === id; })[0];
+    if (!o) return;
+    if (!confirm("متأكد إن مبلغ " + FS.money(o.total) + " " + CUR +
+      " وصل فعلًا على " + (o.pay ? o.pay.n : "المحفظة") + "؟\n\nراجع إشعار محفظتك انت — مو لقطة شاشة العميل.")) return;
+    var ords = FS.get(FS.K.ord, []);
+    ords.forEach(function (x) { if (x.id === id) { x.payOk = 1; x.payAt = Date.now(); } });
+    FS.set(FS.K.ord, ords);
+    FS.setOrderStatus(id, "new");
+    toast("الدفع تأكد — الطلب راح للمطبخ");
+    refreshOrders(false); paintStats();
+  }
+  function block(phone) {
+    if (!confirm("بتحظر الرقم " + phone + "؟ ما راح يقدر يرسل أي طلب ثاني من المنيو.")) return;
+    FS.blockPhone(phone, true);
+    toast("انحظر — تقدر تشيله من تبويب التحكم");
+    paintSecurity();
   }
 
   /* ================= الريسيت ================= */
@@ -193,6 +260,10 @@
       (o.off ? '<div class="rc-t"><span>' + E(o.offLb || "خصم") + "</span><span>− " + FS.money(o.off) + " " + CUR + "</span></div>" : "") +
       (o.del ? '<div class="rc-t"><span>توصيل</span><span>' + FS.money(o.del) + " " + CUR + "</span></div>" : "") +
       '<div class="rc-t big"><span>الإجمالي</span><span>' + FS.money(o.total || 0) + " " + CUR + "</span></div>" +
+      (o.pay
+        ? '<div class="rc-t"><span>' + E(o.pay.n) + (o.payOk ? " — مدفوع" : " — ينتظر التأكيد") +
+          "</span><span>" + E(o.pay.ref) + "</span></div>"
+        : "") +
       "<hr>" +
       '<div class="rc-vat">الأسعار شاملة ضريبة القيمة المضافة 15%<br>الرقم الضريبي: 300000000000003</div><hr>' +
       '<div class="rc-f">شكرًا لزيارتكم — نتشرف فيكم دايم<br>' +
@@ -317,6 +388,9 @@
   function paintControl() {
     renderSo($("soSearch").value.trim());
     renderPr($("prSearch").value.trim());
+    paintSecurity();
+    paintPayInfo();
+    paintTableLinks();
     var url = location.href.replace(/owner\.html.*$/, "");
     $("links").innerHTML =
       '<div class="rw"><div class="nm"><b>رابط العميل (QR الطاولة)</b><span style="direction:ltr;display:inline-block">' +
@@ -325,6 +399,89 @@
       '<div class="rw"><div class="nm"><b>رابط اللوحة (لك أنت بس)</b><span style="direction:ltr;display:inline-block">' +
       E(url + "owner.html") + "</span></div></div>";
   }
+
+  /* ================= الحماية ================= */
+  function redeem() {
+    var r = FS.redeemReward($("rwCode").value);
+    $("rwOut").className = "rwout " + (r.ok ? "ok" : "bad");
+    $("rwOut").textContent = r.msg;
+    if (r.ok) { $("rwCode").value = ""; paintSecurity(); }
+  }
+  function tglSecurity() {
+    var s = FS.toggleSec(!FS.secState().off);
+    toast(s.off ? "الحماية موقّفة — وضع العرض شغّال" : "الحماية رجعت تشتغل");
+    paintSecurity();
+  }
+  function unblock(p) { FS.blockPhone(p, false); paintSecurity(); }
+
+  function paintSecurity() {
+    if (!$("secBox")) return;
+    var s = FS.secState(), C = FS.secCfg(), on = FS.secOn();
+
+    $("secSw").className = "sw " + (on ? "on" : "");
+    $("secState").textContent = on ? "الحماية شغّالة" : "موقّفة (وضع العرض)";
+    $("secState").style.color = on ? "var(--green)" : "var(--red)";
+    $("secRules").innerHTML = [
+      ["طلب مفتوح واحد بالمرة", C.maxOpen],
+      ["ثانية بين الطلبات", C.cooldownSec],
+      ["أقصى طلبات باليوم", C.maxPerDay],
+      ["تأكيد فوق مبلغ", C.confirmAbove ? C.confirmAbove + " " + CUR : "مقفول"],
+      ["تأكيد أول طلب من رقم جديد", C.confirmNewPhone ? "شغّال" : "مقفول"]
+    ].map(function (r) {
+      return '<div class="ctlrow"><div class="nm">' + E(r[0]) + '</div><b class="mono">' + E(r[1]) + "</b></div>";
+    }).join("");
+
+    $("blockList").innerHTML = s.blockPhones.length
+      ? s.blockPhones.map(function (p) {
+        return '<div class="ctlrow"><div class="nm mono">' + E(p) + "</div>" +
+          '<button class="btn btn-s" style="font-size:12px;padding:6px 10px" onclick="Own.unblock(\'' +
+          E(p) + '\')">شيل الحظر</button></div>';
+      }).join("")
+      : '<div style="color:var(--txt3);font-size:13px;padding:8px 0">ما في أرقام محظورة</div>';
+
+    var L = FS.loyList().filter(function (c) { return c.total > 0; });
+    $("loyCards").innerHTML = L.length
+      ? L.slice(0, 25).map(function (c) {
+        var codes = c.open.map(function (r) { return r.code; }).join(" · ");
+        return '<div class="ctlrow"><div class="nm"><b class="mono">' + E(c.phone) + "</b>" +
+          '<span style="color:var(--txt3);font-size:11px"> · ' + c.total + " طلب محسوب" +
+          (c.used ? " · صرف " + c.used + " هدية" : "") + "</span>" +
+          (codes ? '<span style="color:var(--orange);font-size:11.5px;display:block">كود معلّق: ' + E(codes) + "</span>" : "") +
+          "</div><b class='mono'>" + c.n + "/" + c.goal + "</b></div>";
+      }).join("")
+      : '<div style="color:var(--txt3);font-size:13px;padding:8px 0">لسه ما في كروت ولاء — الختم يُحسب لما تعلّم الطلب «تم التسليم»</div>';
+  }
+
+  /* الأرقام اللي العميل يشوفها — عشان الإدارة تراجعها قبل ما تنزل غلط */
+  function paintPayInfo() {
+    if (!$("payInfo")) return;
+    var P = S.payment || { on: false, methods: [] };
+    if (!P.on || !(P.methods || []).length) {
+      $("payInfo").innerHTML = '<div style="color:var(--txt3);font-size:13px;padding:8px 0">الدفع الإلكتروني مقفول — كاش بس</div>';
+      return;
+    }
+    $("payInfo").innerHTML = P.methods.map(function (m) {
+      return '<div class="ctlrow"><div class="nm">' + E(m.n) +
+        '<span style="font-size:11px;display:block;direction:ltr;color:' +
+        (m.demo ? "var(--red)" : "var(--txt3)") + '">' + E(m.to) +
+        (m.demo ? " ← لسه رقم تجريبي، غيّره في data/sales.js" : "") + "</span></div></div>";
+    }).join("");
+  }
+
+  /* رابط + كود لكل طاولة — هذي اللي تمنع أحد من بيته يطلب على طاولة ٧ */
+  function paintTableLinks() {
+    if (!$("tblLinks")) return;
+    var base = location.href.replace(/owner\.html.*$/, "") + "index.html";
+    var h = "";
+    for (var i = 1; i <= S.order.tables; i++) {
+      var u = FS.tableLink(base, i);
+      h += '<div class="ctlrow"><div class="nm">طاولة ' + i +
+        '<span style="color:var(--txt3);font-size:11px;display:block;direction:ltr">' + E(u) + "</span></div>" +
+        '<a class="btn btn-s" style="font-size:12px;padding:6px 10px" target="_blank" href="' + E(u) + '">فتح</a></div>';
+    }
+    $("tblLinks").innerHTML = h;
+  }
+
   function renderSo(q) {
     var c = FS.control();
     var list = FS.items().filter(function (r) {
@@ -400,6 +557,7 @@
     [].forEach.call($("tabs2").children, function (b) { b.classList.remove("on"); });
     btn.classList.add("on");
     if (id === "or") { FS.markAllSeen(); stopAlarm(); paintOrders(); updateBadge(); }
+    if (id === "ct") paintControl();   // الحماية وكروت الولاء تتحدث كل ما يفتح التبويب
     window.scrollTo(0, 0);
   }
   function theme() {
@@ -444,6 +602,7 @@
     tab: tab, theme: theme, tglSound: tglSound, setFilter: function (f) { filter = f; paintOrders(); },
     setSt: setSt, cancelOrder: cancelOrder, printOrder: printOrder,
     tglSold: tglSold, setPrice: setPrice,
+    block: block, unblock: unblock, redeem: redeem, tglSecurity: tglSecurity, payOk: payOk,
     exportCsv: exportCsv,
     tglDemo: function () { demo = !demo; filter = "all"; refreshAll(false); },
     reset: function () {

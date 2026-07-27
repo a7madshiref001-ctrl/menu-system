@@ -166,6 +166,49 @@
       </div>
     </div>
   </div>
+  <!-- ===== الحماية ===== -->
+  <div class="grid g2" style="margin-bottom:12px" id="secBox">
+    <div class="card">
+      <h3>حرق كود الهدية</h3>
+      <div class="sub">العميل يوريك كود من جواله — اكتبه هنا. الكود يُصرف مرة وحدة بس وما يتكرر</div>
+      <div class="rwrow">
+        <input class="searchbox" id="rwCode" placeholder="FR-XXXX" style="text-transform:uppercase;direction:ltr;text-align:center;margin:0">
+        <button class="btn btn-g" onclick="Own.redeem()">اصرف الهدية</button>
+      </div>
+      <div class="rwout" id="rwOut"></div>
+
+      <h3 style="margin-top:18px">كروت الولاء</h3>
+      <div class="sub">الختم يُحسب لما تعلّم الطلب «تم التسليم» — مو لما العميل يرسل</div>
+      <div id="loyCards" style="max-height:260px;overflow-y:auto"></div>
+    </div>
+
+    <div class="card">
+      <h3>الحماية من الطلبات الوهمية</h3>
+      <div class="sub">أقفلها بس وقت ما تعرض النظام على أحد — ورجّعها بعدها</div>
+      <div class="ctlrow">
+        <div class="nm"><b id="secState">الحماية شغّالة</b></div>
+        <div class="sw on" id="secSw" onclick="Own.tglSecurity()"><i></i></div>
+      </div>
+      <div id="secRules"></div>
+
+      <h3 style="margin-top:18px">الأرقام المحظورة</h3>
+      <div class="sub">احظر أي رقم من كرت الطلب — ما راح يقدر يرسل مرة ثانية</div>
+      <div id="blockList" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <div class="card no-print" style="margin-bottom:12px">
+    <h3>أرقام التحويل اللي تظهر للعميل</h3>
+    <div class="sub">القاعدة الذهبية: أكّد الدفع من <b>إشعار محفظتك انت</b> — لقطة شاشة العميل ممكن تكون مزوّرة</div>
+    <div id="payInfo"></div>
+  </div>
+
+  <div class="card no-print" style="margin-bottom:12px">
+    <h3>QR لكل طاولة</h3>
+    <div class="sub">اطبع لكل طاولة الكود حقها — العميل ساعتها ما يختار رقم الطاولة بيده، يُقرأ من الكود</div>
+    <div id="tblLinks" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+
   <div class="card no-print">
     <h3>الروابط</h3>
     <div class="sub">رابط العميل ينحط على الطاولة كـ QR — واللوحة هذي لك أنت بس</div>
@@ -241,6 +284,7 @@
 </div>
 
 <!-- ============ الريسيت (للطباعة بس) ============ -->
+<div class="otoast" id="otoast"></div>
 <div id="printArea"></div>
 
 <script src="data/menu.js?v=5"></script>

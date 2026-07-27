@@ -16,7 +16,10 @@
     seed: "fsys.seeded.v1",
     cart: "fsys.cart.v1",
     cid: "fsys.cid.v1",
-    theme: "fsys.theme.v1"
+    theme: "fsys.theme.v1",
+    sec: "fsys.security.v1",
+    did: "fsys.device.v1",
+    myph: "fsys.myphone.v1"
   };
 
   /* ---------------- تخزين ---------------- */
@@ -38,7 +41,8 @@
   function onMsg(fn) {
     if (chan) chan.onmessage = function (e) { fn(e.data || {}); };
     w.addEventListener("storage", function (e) {
-      if (e.key === K.ev || e.key === K.ord || e.key === K.ctl) fn({ type: "sync" });
+      if (e.key === K.ev || e.key === K.ord || e.key === K.ctl ||
+        e.key === K.loy || e.key === K.sec) fn({ type: "sync" });
     });
   }
 
@@ -252,15 +256,256 @@
   function pushOrder(order) {
     if (!order.status) order.status = "new";
     if (order.seen == null) order.seen = false;
+    order.dev = did();
     var o = get(K.ord, []); o.push(order); set(K.ord, o);
-    track("order", { v: order.total, up: order.up, ad: order.addon });
+    track("order", { v: order.total, up: order.up, ad: order.addon, st: order.status });
     emit("order", order);
   }
+  /* لما الطلب يتعلّم «تم التسليم» يُحسب الختم — هذي نقطة الثقة الوحيدة في النظام */
   function setOrderStatus(id, st) {
-    var o = get(K.ord, []), hit = null;
+    var o = get(K.ord, []), hit = null, loyRes = null;
     o.forEach(function (x) { if (x.id === id) { x.status = st; x.seen = true; hit = x; } });
-    if (hit) { set(K.ord, o); emit("order_update", hit); }
-    return hit;
+    if (hit) {
+      if (st === "done") loyRes = awardStamp(hit);   // يعدّل hit.loy داخليًا
+      set(K.ord, o);
+      emit("order_update", hit);
+      if (loyRes) emit("loyalty", { phone: hit.phone, res: loyRes });
+    }
+    return { order: hit, loy: loyRes };
+  }
+
+  /* ============================================================
+     الحماية — الجهاز، الحارس، قائمة الحظر
+     ============================================================ */
+
+  /* معرّف الجهاز: ثابت (مو مثل cid اللي يتجدد كل جلسة) */
+  function did() {
+    var d = get(K.did, null);
+    if (!d) {
+      d = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      set(K.did, d);
+    }
+    return d;
+  }
+
+  function secCfg() {
+    return Object.assign({
+      on: true, cooldownSec: 90, maxOpen: 1, maxPerDay: 8, minDwellSec: 8,
+      confirmNewPhone: true, confirmAbove: 0, requireTableQR: false, tableSecret: "x"
+    }, w.SALES.security || {});
+  }
+  function secState() {
+    return Object.assign({ blockPhones: [], blockDevs: [], off: false }, get(K.sec, {}));
+  }
+  function saveSec(s) { set(K.sec, s); emit("security", s); }
+
+  /* وضع العرض: يوقف الحارس مؤقتًا عشان الديمو ما ينقفل قدام العميل */
+  function secOn() { return !!secCfg().on && !secState().off; }
+  function toggleSec(off) { var s = secState(); s.off = !!off; saveSec(s); return s; }
+
+  function blockPhone(p, on) {
+    var s = secState(), i = s.blockPhones.indexOf(p);
+    if (on && i < 0) s.blockPhones.push(p);
+    if (!on && i > -1) s.blockPhones.splice(i, 1);
+    saveSec(s); return s;
+  }
+  function blockDev(d, on) {
+    var s = secState(), i = s.blockDevs.indexOf(d);
+    if (on && i < 0) s.blockDevs.push(d);
+    if (!on && i > -1) s.blockDevs.splice(i, 1);
+    saveSec(s); return s;
+  }
+
+  /* كود الطاولة: يتحط في رابط الـQR (?t=7&k=xxxx) عشان ما أحد يختار طاولة من راسه */
+  function tableKey(n) {
+    return hash(String(n) + "|" + secCfg().tableSecret).toString(36).slice(0, 5);
+  }
+  function tableLink(base, n) {
+    return base + "?t=" + n + "&k=" + tableKey(n);
+  }
+  function tableOk(n, k) {
+    return !!n && !!k && tableKey(n) === String(k);
+  }
+
+  /* طلبات هذا الشخص: نفس الجهاز أو نفس الرقم (الحقيقية فقط) */
+  function myOrders(phone) {
+    var d = did();
+    return get(K.ord, []).filter(function (o) {
+      return !o.demo && (o.dev === d || (phone && o.phone && o.phone === phone));
+    });
+  }
+
+  /* الحارس — يُسأل قبل ما الطلب يُسجّل أصلًا */
+  function guardOrder(ctx) {
+    ctx = ctx || {};
+    var out = { ok: true, msg: "", flags: [] };
+    var C = secCfg(), S = secState(), now = Date.now(), d = did();
+    var phone = (ctx.phone || "").trim();
+    var dine = ctx.mode === (w.SALES.order.modes || [])[0];
+
+    /* الحظر شغّال حتى في وضع العرض */
+    if (phone && S.blockPhones.indexOf(phone) > -1)
+      return { ok: false, msg: "ما نقدر نستقبل الطلب من هذا الرقم — كلّمنا على رقم المطعم", flags: [] };
+    if (S.blockDevs.indexOf(d) > -1)
+      return { ok: false, msg: "ما نقدر نستقبل الطلب من هذا الجهاز — كلّمنا على رقم المطعم", flags: [] };
+
+    if (!secOn()) return out;
+
+    /* مصيدة: هذا الحقل مخفي، الإنسان عمره ما يعبّيه */
+    if (ctx.trap) return { ok: false, msg: "صارت مشكلة في الطلب — جرّب مرة ثانية", flags: [] };
+
+    /* اللي يرسل خلال ثانيتين ما قرأ منيو */
+    if (C.minDwellSec && (ctx.dwellSec || 0) < C.minDwellSec)
+      return { ok: false, msg: "لحظة — راجع طلبك وأرسل مرة ثانية", flags: [] };
+
+    var mine = myOrders(phone);
+
+    /* طلب لسه مفتوح = ما في طلب جديد */
+    var open = mine.filter(function (o) {
+      var s = o.status || "new";
+      return s === "new" || s === "prep" || s === "confirm";
+    });
+    if (open.length >= C.maxOpen)
+      return { ok: false, msg: "عندك طلب لسه شغّال (#" + open[0].id + ") — انتظر لين يتسلّم", flags: [] };
+
+    /* فترة الانتظار بين الطلبات */
+    var last = mine.reduce(function (a, o) { return Math.max(a, o.t || 0); }, 0);
+    if (last) {
+      var wait = Math.ceil((C.cooldownSec * 1000 - (now - last)) / 1000);
+      if (wait > 0)
+        return { ok: false, msg: "انتظر " + wait + " ثانية قبل ما ترسل طلب ثاني", flags: [] };
+    }
+
+    /* سقف يومي */
+    var day = new Date(); day.setHours(0, 0, 0, 0);
+    var today = mine.filter(function (o) {
+      return (o.t || 0) >= day.getTime() && (o.status || "") !== "cancel";
+    }).length;
+    if (today >= C.maxPerDay)
+      return { ok: false, msg: "وصلت لأقصى عدد طلبات في اليوم — كلّمنا على رقم المطعم", flags: [] };
+
+    /* أسباب تخلي الطلب ينتظر تأكيد الكاشير بدل ما يروح للمطبخ */
+    /* «معروف» = هذا الرقم نفسه استلم طلب قبل — مو الجهاز */
+    var known = mine.filter(function (o) {
+      return o.status === "done" && phone && o.phone === phone;
+    }).length;
+    if (!dine && C.confirmNewPhone && !known) out.flags.push("أول طلب من هذا الرقم");
+    if (C.confirmAbove && (ctx.total || 0) >= C.confirmAbove)
+      out.flags.push("مبلغ كبير — " + Math.round(ctx.total) + " " + ((w.MENU && w.MENU.brand.currency) || ""));
+    if (dine && C.requireTableQR && !ctx.tableOk) out.flags.push("الطاولة مختارة يدويًا مو من QR");
+    return out;
+  }
+
+  /* ============================================================
+     الولاء — الأختام بالرقم، والهدية بكود لمرة واحدة
+     ============================================================ */
+  function loyCfg() {
+    return Object.assign({
+      on: true, goal: 5, reward: "هدية", minOrder: 0, maxPerDay: 1, codeLife: 30
+    }, w.SALES.loyalty || {});
+  }
+  function loyStore() {
+    var s = get(K.loy, null);
+    if (!s || s.v !== 2) { s = { v: 2, cards: {} }; set(K.loy, s); }
+    return s;
+  }
+  function emptyCard() { return { n: 0, total: 0, last: 0, days: {}, orders: {}, rewards: [] }; }
+  function loyCard(phone) {
+    var s = loyStore();
+    return Object.assign(emptyCard(), s.cards[(phone || "").trim()] || {});
+  }
+  function dayKey(t) {
+    var d = new Date(t);
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+  function newCode(s) {
+    var A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", used = {};
+    Object.keys(s.cards).forEach(function (p) {
+      (s.cards[p].rewards || []).forEach(function (r) { used[r.code] = 1; });
+    });
+    for (var tries = 0; tries < 200; tries++) {
+      var c = "FR-";
+      for (var i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)];
+      if (!used[c]) return c;
+    }
+    return "FR-" + Date.now().toString(36).slice(-4).toUpperCase();
+  }
+
+  /* يُنادى من setOrderStatus لما الحالة تصير «تم التسليم» — مو من جوال العميل */
+  function awardStamp(order) {
+    var C = loyCfg();
+    if (!C.on || !order || order.demo) return null;
+    if (order.loy) return null;                                  // محسوب من قبل
+    var ph = (order.phone || "").trim();
+    if (!ph) return { err: "الطلب بدون رقم جوال — الختم مربوط بالرقم" };
+    if ((order.total || 0) < (C.minOrder || 0))
+      return { err: "الطلب أقل من " + C.minOrder + " — ما يستاهل ختم" };
+
+    var s = loyStore(), c = s.cards[ph] || emptyCard();
+    if (c.orders[order.id]) return null;
+    var dk = dayKey(order.t || Date.now());
+    if ((c.days[dk] || 0) >= (C.maxPerDay || 1))
+      return { err: "هذا الرقم خذ ختمه اليوم" };
+
+    c.n++; c.total++; c.last = Date.now();
+    c.days[dk] = (c.days[dk] || 0) + 1;
+    c.orders[order.id] = 1;
+
+    var rw = null;
+    if (c.n >= (C.goal || 5)) {
+      c.n = 0;
+      rw = { code: newCode(s), at: Date.now(), used: false, usedAt: 0, phone: ph };
+      c.rewards.push(rw);
+    }
+    s.cards[ph] = c; set(K.loy, s);
+    order.loy = 1;
+    return { ok: true, phone: ph, n: c.n, goal: C.goal, total: c.total, reward: rw };
+  }
+
+  function liveRewards(phone) {
+    var C = loyCfg(), life = (C.codeLife || 0) * 86400000, now = Date.now();
+    return (loyCard(phone).rewards || []).filter(function (r) {
+      return !r.used && (!life || now - r.at <= life);
+    });
+  }
+  function findReward(code) {
+    var s = loyStore(), out = null;
+    Object.keys(s.cards).forEach(function (p) {
+      (s.cards[p].rewards || []).forEach(function (r) {
+        if (r.code === code) out = { r: r, phone: p, store: s };
+      });
+    });
+    return out;
+  }
+  /* الكاشير يحرق الكود — بعدها لقطة الشاشة ما تنفع */
+  function redeemReward(code) {
+    code = String(code || "").trim().toUpperCase();
+    if (!code) return { ok: false, msg: "اكتب الكود أول" };
+    var f = findReward(code);
+    if (!f) return { ok: false, msg: "هذا الكود غير موجود" };
+    if (f.r.used) return {
+      ok: false,
+      msg: "هذا الكود مصروف من قبل — " + new Date(f.r.usedAt).toLocaleString("ar-SA")
+    };
+    var C = loyCfg(), life = (C.codeLife || 0) * 86400000;
+    if (life && Date.now() - f.r.at > life)
+      return { ok: false, msg: "هذا الكود انتهت صلاحيته (" + C.codeLife + " يوم)" };
+    f.r.used = true; f.r.usedAt = Date.now();
+    set(K.loy, f.store);
+    emit("loyalty", { phone: f.phone, redeem: code });
+    return { ok: true, msg: "تم — الهدية انصرفت لصاحب الرقم " + f.phone, phone: f.phone };
+  }
+  /* لوحة الإدارة: أعلى العملاء ولاءً + الأكواد المعلّقة */
+  function loyList() {
+    var s = loyStore(), C = loyCfg();
+    return Object.keys(s.cards).map(function (p) {
+      var c = s.cards[p];
+      return {
+        phone: p, n: c.n, goal: C.goal, total: c.total, last: c.last,
+        open: (c.rewards || []).filter(function (r) { return !r.used; }),
+        used: (c.rewards || []).filter(function (r) { return r.used; }).length
+      };
+    }).sort(function (a, b) { return b.total - a.total; });
   }
   function markAllSeen() {
     var o = get(K.ord, []), dirty = false;
@@ -289,8 +534,11 @@
     var revs = get(K.rev, []).filter(function (r) { return r.t >= since && (includeDemo || !r.demo); });
     var cus = get(K.cus, []).filter(function (r) { return r.t >= since && (includeDemo || !r.demo); });
 
-    // الملغي مش بيتحسب في الإيراد ولا عدد الأوردرات
-    var act = ords.filter(function (x) { return (x.status || "done") !== "cancel"; });
+    // الملغي ما يُحسب في الإيراد — واللي ينتظر تأكيد أو ينتظر الدفع كذلك
+    var act = ords.filter(function (x) {
+      var s = x.status || "done";
+      return s !== "cancel" && s !== "confirm" && s !== "paywait";
+    });
 
     var o = {
       days: days, events: evs.length,
@@ -398,7 +646,14 @@
     pushOrder: pushOrder, pushReview: pushReview, pushCustomer: pushCustomer,
     setOrderStatus: setOrderStatus, markAllSeen: markAllSeen,
     control: control, saveControl: saveControl, agg: agg,
-    money: money, esc: esc, cid: cid,
+    money: money, esc: esc, cid: cid, did: did,
+    /* الحماية */
+    secCfg: secCfg, secState: secState, secOn: secOn, toggleSec: toggleSec,
+    blockPhone: blockPhone, blockDev: blockDev, guardOrder: guardOrder,
+    tableKey: tableKey, tableLink: tableLink, tableOk: tableOk,
+    /* الولاء */
+    loyCfg: loyCfg, loyCard: loyCard, loyList: loyList,
+    liveRewards: liveRewards, redeemReward: redeemReward,
     ensureSeed: function () {
       var s = get(K.seed, null);
       if (!s || s.v !== 4) {   // نسخة بيانات قديمة → إعادة توليد بالهيكل الجديد

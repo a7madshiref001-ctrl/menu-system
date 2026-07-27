@@ -15,6 +15,20 @@
   var cur = null;                    // الصنف المفتوح دلوقتي
   var mode = S.order.modes[0];
 
+  /* ---------- دفع ---------- */
+  var payId = "cash", payRef = "";   // "cash" = يدفع عند الاستلام
+
+  /* ---------- حماية ---------- */
+  var pageT = Date.now();            // نقيس كم قعد على الصفحة قبل ما يرسل
+  var qTable = null, qKeyOk = false; // الطاولة جاية من QR أو لا
+  (function readQR() {
+    try {
+      var q = new URLSearchParams(location.search);
+      var t = q.get("t"), k = q.get("k");
+      if (t && FS.tableOk(t, k)) { qTable = t; qKeyOk = true; }
+    } catch (e) { }
+  })();
+
   /* ---------- أدوات ---------- */
   function toast(msg) {
     var t = $("toast"); t.textContent = msg; t.classList.add("show");
@@ -367,13 +381,72 @@
     $("addrBlk").classList.toggle("hidden", mode !== "توصيل");
     var opt = mode === "محلي";
     $("nameHint").textContent = opt ? "(اختياري)" : "(مطلوب)";
-    $("phoneHint").textContent = opt ? "(اختياري — نرسل لك عروضنا)" : "(مطلوب — للتواصل)";
+    $("phoneHint").textContent = opt
+      ? "(اختياري — بدونه ما في أختام ولاء)"
+      : "(مطلوب — للتواصل)";
     if (!$("tableNo").options.length) {
       var o = "";
       for (var i = 1; i <= S.order.tables; i++) o += "<option>" + i + "</option>";
       $("tableNo").innerHTML = o;
     }
+    renderPay();
+    // جاي من QR الطاولة؟ إذًا الرقم مقفول — ما يختاره بيده
+    if (qKeyOk) {
+      $("tableNo").value = qTable;
+      $("tableNo").disabled = true;
+      $("tableHint").textContent = "طاولة " + qTable + " — مقروءة من الـQR";
+      $("tableHint").classList.remove("hidden");
+    } else {
+      $("tableNo").disabled = false;
+      $("tableHint").classList.add("hidden");
+    }
   }
+  /* ---------- طرق الدفع ---------- */
+  var P = S.payment || { on: false, methods: [] };
+  function payMethod() {
+    if (payId === "cash") return null;
+    return (P.methods || []).filter(function (m) { return m.id === payId; })[0] || null;
+  }
+  function renderPay() {
+    if (!P.on || !(P.methods || []).length) { $("payBlk").classList.add("hidden"); return; }
+    $("payBlk").classList.remove("hidden");
+
+    var opts = [{ id: "cash", n: P.cashLabel || "كاش عند الاستلام" }].concat(P.methods);
+    $("payModes").innerHTML = opts.map(function (m) {
+      return '<button class="' + (m.id === payId ? "on" : "") + '" onclick="App.setPay(\'' +
+        E(m.id) + '\')">' + E(m.n) + "</button>";
+    }).join("");
+
+    var m = payMethod();
+    if (!m) { $("payBox").innerHTML = ""; return; }
+
+    var total = cartSub() + (mode === "توصيل" ? S.order.deliveryFee : 0);
+    var len = P.refLen || 6;
+    $("payBox").innerHTML =
+      '<div class="paybox">' +
+      '<div class="ph">' + E(m.hint || "") + "</div>" +
+      '<div class="prow"><span class="k">حوّل على</span>' +
+      '<b class="v mono">' + E(m.to) + "</b>" +
+      '<button class="cpy" onclick="App.copyPay(\'' + E(m.to).replace(/'/g, "&#39;") + '\')">نسخ</button></div>' +
+      '<div class="prow"><span class="k">المبلغ بالضبط</span>' +
+      '<b class="v mono">' + FS.money(total) + " " + CUR + "</b>" +
+      '<button class="cpy" onclick="App.copyPay(\'' + total + '\')">نسخ</button></div>' +
+      '<div class="field" style="margin-top:12px"><label>آخر ' + len + ' أرقام من رقم العملية</label>' +
+      '<input id="cRef" type="tel" inputmode="numeric" maxlength="12" placeholder="' +
+      new Array(len + 1).join("0") + '" value="' + E(payRef) + '" oninput="App.onRef(this.value)"></div>' +
+      '<div class="pnote">اطمن — الطلب ما يتجهّز إلا لما المطعم يشوف المبلغ وصل فعلًا</div>' +
+      "</div>";
+  }
+  function setPay(id) { payId = id; renderPay(); }
+  function onRef(v) { payRef = String(v || "").replace(/\D/g, ""); }
+  function copyPay(t) {
+    var s = String(t);
+    try {
+      navigator.clipboard.writeText(s).then(function () { toast("اننسخ"); },
+        function () { toast(s); });
+    } catch (e) { toast(s); }
+  }
+
   function quickAdd(n) {
     var x = FS.byName(n); if (!x) return;
     cart.push({ n: x.n, p: priceOf(x), q: 1, sec: x.sec, addons: [], up: 1 });
@@ -399,30 +472,63 @@
     }
     if (mode === "توصيل" && !addr) { toast("اكتب العنوان"); $("cAddr").focus(); return; }
 
-    sending = true;
     var sub = cartSub(), del = mode === "توصيل" ? S.order.deliveryFee : 0;
     var total = sub + del;
+
+    /* دفع مقدم؟ لازم رقم العملية — بدونه ما في شي نطابق فيه */
+    var pm = payMethod(), len = P.refLen || 6;
+    if (pm && payRef.length < len) {
+      toast("اكتب آخر " + len + " أرقام من رقم العملية");
+      var rf = $("cRef"); if (rf) rf.focus();
+      return;
+    }
+
+    /* الحارس: يرد قبل ما الطلب يُسجّل أصلًا */
+    var g = FS.guardOrder({
+      phone: phone, mode: mode, total: total,
+      dwellSec: (Date.now() - pageT) / 1000,
+      trap: !!$("cNick").value,
+      tableOk: qKeyOk
+    });
+    if (!g.ok) { toast(g.msg); return; }
+
+    sending = true;
     var upV = cart.filter(function (l) { return l.up; }).reduce(function (a, l) { return a + l.p * l.q; }, 0);
     var adV = cart.reduce(function (a, l) { return a + (l.addonV || 0) * l.q; }, 0);
     var oid = "F" + String(Date.now()).slice(-5);
+    var needsOk = g.flags.length > 0;
 
     FS.pushOrder({
       id: oid, t: Date.now(), lines: cart.slice(), total: total,
       off: 0, offLb: "", del: del, up: upV, addon: adV,
       mode: mode, table: mode === "محلي" ? $("tableNo").value : null,
-      name: name, phone: phone, addr: mode === "توصيل" ? addr : ""
+      name: name, phone: phone, addr: mode === "توصيل" ? addr : "",
+      /* الطلب المدفوع ينتظر تأكيد المبلغ — وما يحتاج طابور التأكيد الثاني */
+      status: pm ? "paywait" : (needsOk ? "confirm" : "new"),
+      pay: pm ? { m: pm.id, n: pm.n, to: pm.to, ref: payRef } : null,
+      flags: g.flags, qr: qKeyOk ? 1 : 0
     });
-    if (phone) FS.pushCustomer({ t: Date.now(), phone: phone, name: name, spent: total });
+    if (phone) {
+      FS.pushCustomer({ t: Date.now(), phone: phone, name: name, spent: total });
+      FS.set(FS.K.myph, phone);
+    }
 
     cart = []; saveCart();
+    payId = "cash"; payRef = "";
     closeAll();
-    showDone(oid, total);
+    showDone(oid, total, needsOk, pm);
     setTimeout(function () { sending = false; }, 900);
   }
 
   /* ---------- شاشة النجاح: تقييم + ولاء ---------- */
-  function showDone(oid, total) {
+  function showDone(oid, total, needsOk, pm) {
     $("dOid").textContent = oid;
+    $("doneHead").textContent = pm ? "طلبك وصلنا" : (needsOk ? "طلبك وصلنا" : "تم استلام طلبك");
+    $("doneSub").textContent = pm
+      ? "نراجع تحويل " + pm.n + " الحين — أول ما نتأكد المبلغ وصل يبدأ التجهيز على طول"
+      : (needsOk
+        ? "بنكلّمك الحين نأكّد الطلب معك وبعدها يبدأ التحضير"
+        : "طلبك وصل للكاشير وبيبدأ تحضيره على طول");
     $("rateBlk").classList.remove("hidden");
     if (lowHTML == null) lowHTML = $("lowBlk").innerHTML;
     $("lowBlk").innerHTML = lowHTML;
@@ -436,22 +542,26 @@
         '<span class="ic">★</span><span class="no">' + i + "</span></button>";
     }).join("");
 
-    // الولاء
-    var loy = FS.get(FS.K.loy, { n: 0 });
-    loy.n = (loy.n || 0) + 1;
-    var goal = S.loyalty.goal, reached = loy.n >= goal;
-    if (reached) loy.n = 0;
-    FS.set(FS.K.loy, loy);
-    paintStamps("stampsRow", reached ? goal : loy.n);
-    $("stampMsg").textContent = reached
-      ? "كملت " + goal + " زيارات — " + S.loyalty.reward
-      : "باقي لك " + (goal - loy.n) + " زيارات وتحصل على " + S.loyalty.reward;
+    // الولاء — الختم ما ينحط الحين، ينحط لما الطلب يتسلّم فعلًا
+    var C = FS.loyCfg(), ph = (FS.get(FS.K.myph, "") || "").trim();
+    var card = FS.loyCard(ph);
+    paintStamps("stampsRow", card.n);
+    if (!C.on) $("stampBlk").classList.add("hidden");
+    else {
+      $("stampBlk").classList.remove("hidden");
+      $("stampMsg").textContent = !ph
+        ? "خلّ رقمك مع الطلب عشان تجمّع أختام وتحصل على " + C.reward
+        : (total < C.minOrder
+          ? "الطلب أقل من " + C.minOrder + " " + CUR + " — ما يحصل على ختم"
+          : "ختمك ينحط أول ما تستلم طلبك — باقي لك " +
+            Math.max(1, C.goal - card.n) + " وتحصل على " + C.reward);
+    }
 
     setTimeout(function () { openSheet("done"); }, 350);
-    FS.track("order_done", { v: total });
+    FS.track("order_done", { v: total, confirm: needsOk ? 1 : 0 });
   }
   function paintStamps(id, n) {
-    var goal = S.loyalty.goal, h = "";
+    var goal = FS.loyCfg().goal, h = "";
     for (var i = 0; i < goal; i++) h += "<i class='" + (i < n ? "on" : "") + "'>" + (i < n ? "★" : i + 1) + "</i>";
     $(id).innerHTML = h;
   }
@@ -506,12 +616,43 @@
     $("lowBlk").innerHTML = "<div style='padding:12px;color:var(--txt2);font-size:13.5px;text-align:center'>وصلت ملاحظتك لصاحب المطعم مباشرة</div>";
   }
 
+  /* ---------- كرت الولاء — مربوط برقم الجوال مو بالجوال نفسه ---------- */
   function openLoyalty() {
-    var loy = FS.get(FS.K.loy, { n: 0 });
-    $("loyN").textContent = (loy.n || 0) + "/" + S.loyalty.goal;
-    paintStamps("loyStamps", loy.n || 0);
-    $("loyMsg").innerHTML = "مع كل طلب تجمع ختم. إذا كملت " + S.loyalty.goal + " أختام لك " + S.loyalty.reward;
+    paintLoyalty();
     openSheet("loy");
+  }
+  function paintLoyalty() {
+    var C = FS.loyCfg(), ph = (FS.get(FS.K.myph, "") || "").trim();
+    $("loyPhone").value = ph;
+    var card = FS.loyCard(ph), rw = ph ? FS.liveRewards(ph) : [];
+    $("loyN").textContent = (ph ? card.n : 0) + "/" + C.goal;
+    paintStamps("loyStamps", ph ? card.n : 0);
+
+    if (!ph) {
+      $("loyMsg").innerHTML = "اكتب رقم جوالك فوق عشان نجيب كرتك.<br>" +
+        "الأختام مربوطة بالرقم مو بالجهاز — لو غيّرت جوال كرتك معك.";
+    } else {
+      $("loyMsg").innerHTML =
+        "الختم ينحط لما تستلم طلبك فعلًا — مو وقت الإرسال.<br>" +
+        "الحد الأدنى للطلب " + C.minOrder + " " + CUR + "، وختم واحد باليوم.<br>" +
+        "كمّل " + C.goal + " أختام وتحصل على " + E(C.reward) + "." +
+        (card.total ? "<br><b>إجمالي طلباتك المحسوبة: " + card.total + "</b>" : "");
+    }
+
+    // كود الهدية: يُحرق عند الكاشير — لقطة الشاشة ما لها فايدة بعدها
+    $("loyReward").innerHTML = rw.length
+      ? rw.map(function (r) {
+        return '<div class="rwcode"><span class="lb">كود هديتك — اعرضه للكاشير</span>' +
+          '<b class="cd mono">' + E(r.code) + "</b>" +
+          '<span class="hint">يُصرف مرة وحدة بس، صالح ' + C.codeLife + " يوم</span></div>";
+      }).join("")
+      : "";
+  }
+  function loyLookup() {
+    var p = $("loyPhone").value.trim();
+    if (!p) { toast("اكتب رقمك أول"); return; }
+    FS.set(FS.K.myph, p);
+    paintLoyalty();
   }
 
   /* ---------- ثيم ---------- */
@@ -540,6 +681,14 @@
       if (m.type === "control") {
         if (curSec) openSection(curSec.id); else { renderPops(); }
       }
+      // الإدارة علّمت الطلب «تم التسليم» → الختم نزل عند العميل لحظيًا
+      if (m.type === "loyalty" || m.type === "order_update" || m.type === "sync") {
+        if ($("loy").classList.contains("show")) paintLoyalty();
+        if ($("done").classList.contains("show")) {
+          var c = FS.loyCard((FS.get(FS.K.myph, "") || "").trim());
+          paintStamps("stampsRow", c.n);
+        }
+      }
     });
   }
 
@@ -548,7 +697,9 @@
     pickSize: pickSize, tglAddon: tglAddon, tglSug: tglSug, qty: qty,
     addToCart: addToCart, addCombo: addCombo, rmLine: rmLine, quickAdd: quickAdd,
     openCart: openCart, setMode: setMode, sendOrder: sendOrder,
-    rate: rate, openMaps: openMaps, sendComplaint: sendComplaint, openLoyalty: openLoyalty,
+    setPay: setPay, onRef: onRef, copyPay: copyPay,
+    rate: rate, openMaps: openMaps, sendComplaint: sendComplaint,
+    openLoyalty: openLoyalty, loyLookup: loyLookup,
     toggleTheme: toggleTheme, closeAll: closeAll
   };
   document.addEventListener("DOMContentLoaded", init);

@@ -257,8 +257,33 @@ body::before{
   font-style:normal;font-size:15px;color:var(--txt3)}
 .stamps i.on{background:var(--orange);border-color:var(--orange);border-style:solid;color:#fff}
 
+/* ===== الدفع ===== */
+.paybox{margin-top:12px;border:1px solid var(--line2);border-radius:14px;padding:14px;background:var(--card2)}
+.paybox .ph{font-size:12.5px;color:var(--txt2);line-height:1.8;margin-bottom:10px}
+.paybox .prow{display:flex;align-items:center;gap:9px;padding:9px 0;border-top:1px dashed var(--line2)}
+.paybox .prow .k{font-size:12px;color:var(--txt3);flex:none;min-width:88px}
+.paybox .prow .v{flex:1;font-size:16px;font-weight:800;direction:ltr;text-align:right;color:var(--orange);
+  word-break:break-all}
+.paybox .cpy{flex:none;background:var(--card);border:1px solid var(--line2);color:var(--txt2);
+  border-radius:9px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+.paybox .cpy:active{background:var(--orange);color:#fff;border-color:var(--orange)}
+.paybox .pnote{font-size:11.5px;color:var(--txt3);line-height:1.7;margin-top:10px}
+
+/* المصيدة: مخفية تمامًا عن أي إنسان — البوت بس اللي يشوفها ويعبّيها */
+.trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+.fhint{font-size:12px;color:var(--green);margin-top:6px}
+
 /* loyalty sheet */
 #loy .wrap{padding:20px;text-align:center}
+#loy .loyph{text-align:right;margin:14px 0 4px}
+#loy .loyrow{display:flex;gap:8px}
+#loy .loyrow input{flex:1}
+#loy .loyrow .btn{white-space:nowrap;padding:0 14px}
+.rwcode{border:1.5px dashed var(--orange);border-radius:14px;padding:12px;margin:4px 0 12px;
+  background:color-mix(in srgb,var(--orange) 9%,transparent)}
+.rwcode .lb{display:block;font-size:12px;color:var(--txt2)}
+.rwcode .cd{display:block;font-size:28px;font-weight:800;letter-spacing:3px;color:var(--orange);margin:4px 0}
+.rwcode .hint{display:block;font-size:11.5px;color:var(--txt3)}
 #loy .big{font-family:'Changa';font-size:44px;font-weight:800;color:var(--orange)}
 
 /* footer */
